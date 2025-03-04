@@ -1,0 +1,87 @@
+{
+    "version": "v1",
+    "config": {
+        "visState": {
+            "filters": [],
+            "layers": [{
+                "id": "choropleth1",
+                "type": "geojson",
+                "config": {
+                    "dataId": "Coffee Shop Count",
+                    "label": "Neighborhood Counts",
+                    "color": [18, 147, 154],
+                    "columns": {
+                        "geojson": "geometry"
+                    },
+                    "isVisible": true,
+                    "visConfig": {
+                        "opacity": 0.8,
+                        "strokeOpacity": 0.8,
+                        "thickness": 0.5,
+                        "strokeColor": [221, 178, 124],
+                            "colorRange": {
+                                "name": "Custom Red",
+                                "type": "sequential",
+                                "category": "Custom",
+                                "colors": [
+                                    "#FFEDEA", 
+                                    "#FFCEC5", 
+                                    "#FFAD9F", 
+                                    "#FF8A75", 
+                                    "#FF5533", 
+                                    "#E31A1C"
+                                ]
+                            },
+                        "strokeColorRange": {
+                            "name": "Global Warming",
+                            "type": "sequential",
+                            "category": "Uber",
+                            "colors": [
+                                "#5A1846",
+                                "#900C3F",
+                                "#C70039",
+                                "#E3611C",
+                                "#F1920E",
+                                "#FFC300"
+                            ]
+                        },
+                        "radius": 10,
+                        "sizeRange": [0, 10],
+                        "radiusRange": [0, 50],
+                        "heightRange": [0, 500],
+                        "elevationScale": 5,
+                        "enableElevationZoomFactor": true,
+                        "stroked": true,
+                        "filled": true,
+                        "enable3d": false,
+                        "wireframe": false
+                    }
+                },
+                "visualChannels": {
+                    "colorField": {
+                        "name": "location_count",
+                        "type": "integer"
+                    },
+                    "colorScale": "quantile",
+                    "strokeColorField": null,
+                    "strokeColorScale": "quantile",
+                    "sizeField": null,
+                    "sizeScale": "linear",
+                    "heightField": null,
+                    "heightScale": "linear",
+                    "radiusField": null,
+                    "radiusScale": "linear"
+                }
+            }]
+        },
+        "mapState": {
+            "bearing": 0,
+            "dragRotate": false,
+            "latitude": 37.7749,
+            "longitude": -122.4194,
+            "pitch": 0,
+            "zoom": 11,
+            "isSplit": false
+        }
+    }
+}
