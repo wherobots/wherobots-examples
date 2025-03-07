@@ -15,14 +15,16 @@ or your direct support channel if you are a Professional or Enterprise Edition c
 
 ```
 .
-├── python                        # Python examples
-│   ├──havasu                     # Havasu and data processing examples
-│   ├──wherobots-ai               # Wherobots AI examples
-│   │   └──gpu                    # GPU-accelerated, Raster Inference examples
-│   └──wherobots-db               # WherobotsDB examples
-├── scala                         # Scala examples
-│   ├──sedona-maven-example       # A template for packaging jars
-│   └──wherobots-db               # WherobotsDB examples
-│── FirstWherobotsNotebook.ipynb  # Welcome notebook for first-time users          
-└── README.md
+├── README.md
+├── advanced                
+├── datasets
+│   └── foursquare-places-example
+│       └── assets
+├── get-started
+│   └── map-config
+├── snippets
+├── wherobots-ai
+│   ├── conf
+│   ├── gpu
+│   │   ├── img
 ```
