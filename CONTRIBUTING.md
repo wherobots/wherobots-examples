@@ -1,6 +1,6 @@
 ## Community Contributions
 
-If you would like to contribute a notebook and see it added to Wherobots Example Notebooks, simply open a PR and work with the reviewers to get your notebook merged. It will make it into the next release.
+If you would like to contribute a notebook and add it to Wherobots Example Notebooks, open a pull request with your contribution and work with the reviewers to get your notebook merged. If merged, itt will make it into the next eligible release.
 
 ## Wherobots Contributions
 
