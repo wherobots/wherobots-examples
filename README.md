@@ -15,14 +15,14 @@ or your direct support channel if you are a Professional or Enterprise Edition c
 
 ```
 .
-├── python                        # Python examples
-│   ├──havasu                     # Havasu and data processing examples
-│   ├──wherobots-ai               # Wherobots AI examples
-│   │   └──gpu                    # GPU-accelerated, Raster Inference examples
-│   └──wherobots-db               # WherobotsDB examples
-├── scala                         # Scala examples
-│   ├──sedona-maven-example       # A template for packaging jars
-│   └──wherobots-db               # WherobotsDB examples
-│── FirstWherobotsNotebook.ipynb  # Welcome notebook for first-time users          
-└── README.md
-```
+├── README.md
+├── data-connections
+├── get-started
+├── iceberg
+├── map-matching
+├── map-tile-generation
+├── raster-inference
+├── reading-spatial-data
+├── spatial-joins
+├── spatial-statistics
+└── ➡️-START-HERE-Onboarding-Part-1.ipynb
