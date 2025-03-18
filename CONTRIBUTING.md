@@ -13,7 +13,7 @@ git push origin v1.6.0
 
 Then, use the Github UI to make a release from the tag.
 
-If a release for notebooks has already been published, remake the tag
+If a release for notebooks has already been published, remake the tag:
 
 ```
 git tag -d v1.6.0
