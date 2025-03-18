@@ -11,7 +11,7 @@ git tag v1.6.0
 git push origin v1.6.0
 ```
 
-Then use the Github UI to make a release from the tag.
+Then, use the Github UI to make a release from the tag.
 
 If a release for notebooks has already been published, remake the tag
 
