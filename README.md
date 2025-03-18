@@ -16,15 +16,13 @@ or your direct support channel if you are a Professional or Enterprise Edition c
 ```
 .
 ├── README.md
-├── advanced                
-├── datasets
-│   └── foursquare-places-example
-│       └── assets
+├── data-connections
 ├── get-started
-│   └── map-config
-├── snippets
-├── wherobots-ai
-│   ├── conf
-│   ├── gpu
-│   │   ├── img
-```
+├── iceberg
+├── map-matching
+├── map-tile-generation
+├── raster-inference
+├── reading-spatial-data
+├── spatial-joins
+├── spatial-statistics
+└── ➡️-START-HERE-Onboarding-Part-1.ipynb
