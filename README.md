@@ -15,14 +15,8 @@ or your direct support channel if you are a Professional or Enterprise Edition c
 
 ```
 .
-├── README.md
-├── data-connections
-├── get-started
-├── iceberg
-├── map-matching
-├── map-tile-generation
-├── raster-inference
-├── reading-spatial-data
-├── spatial-joins
-├── spatial-statistics
-└── ➡️-START-HERE-Onboarding-Part-1.ipynb
+├── Analyzing_Data            # Explore WherobotsDB and WherobotsAI features: clustering, spatial statistics, map matching, joins, outlier detection, model inference, object detection, raster processing.
+├── Getting_Started           # 4 part introduction to Wherobots environment: loading, reading, accelerating, and joining geospatial data.
+├── Open_Data_Connections     # Connect to open datasets in Wherobots: ESA WorldCover, Foursquare Places, Overture Maps.
+├── Reading_and_Writing_Data  # Read and write with multiple data formats: spatial files, map tiles, STAC data.
+└── README.md
