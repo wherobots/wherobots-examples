@@ -1,0 +1,68 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: 'Release name must follow wherobots-examples-vX.Y.Z'
+        required: true
+      overwrite:
+        description: 'Overwrite existing release'
+        type: boolean
+        required: true
+        default: false
+      prerelease:
+        description: 'Set as a pre-release'
+        required: true
+        type: boolean
+        default: false
+      make_latest:
+        description: 'Set as the latest release'
+        required: true
+        type: boolean
+        default: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate release name
+        run: |
+          if [[ "${{ github.event.inputs.name }}" =~ ^wherobots-examples-v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Valid release name."
+          else
+            echo "Release name must follow the pattern wherobots-examples-vX.Y.Z"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Delete existing release if exists
+        if: ${{ github.event.inputs.overwrite }}
+        uses: dev-drprasad/delete-tag-and-release@v1.1
+        with:
+          tag_name: ${{ github.event.inputs.name }}
+          delete_release: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build archives
+        run: |
+          zip -r ${{ github.event.inputs.name }}.zip .
+          tar -czf ${{ github.event.inputs.name }}.tar.gz .
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.event.inputs.name }}
+          tag_name: ${{ github.event.inputs.name }}
+          draft: false
+          prerelease: ${{ github.event.inputs.prerelease }}
+          make_latest: ${{ github.event.inputs.make_latest }}
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+          files: |
+            ${{ github.event.inputs.name }}.zip
+            ${{ github.event.inputs.name }}.tar.gz
+            **/*.ipynb
+            **/*.scala
