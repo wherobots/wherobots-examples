@@ -17,7 +17,6 @@ object SedonaDbExample extends App {
 
   val s3BucketName = "wherobots-examples"
   val config = SedonaContext.builder()
-    .config(s"spark.hadoop.fs.s3a.bucket.$s3BucketName.aws.credentials.provider","org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider")
     .getOrCreate()
 	val sedona = SedonaContext.create(config)
   val sc = sedona.sparkContext
