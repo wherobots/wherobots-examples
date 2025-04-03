@@ -35,5 +35,3 @@ else
     mv "$temp_file" "./README.md"
     exit 1
 fi
-
-# Replace the original file with the modified content
