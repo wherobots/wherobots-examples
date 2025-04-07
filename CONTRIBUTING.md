@@ -1,8 +1,10 @@
 ## Community Contributions
 
-If you would like to contribute a notebook and add it to Wherobots Example Notebooks, open a pull request with your contribution and work with the reviewers to get your notebook merged. If merged, itt will make it into the next eligible release.
+If you would like to contribute a notebook and add it to Wherobots Example Notebooks, open a pull request with your contribution and work with the reviewers to get your notebook merged. If merged, it will make it into the next eligible release. Additionally we are happy to work with you to share your work with the broader Apache Sedona and Wherobots user community via our newsletter or other mediums.
 
 ## Wherobots Contributions
+
+If you are a member of the Wherobots org, the following instructions apply.
 
 To release a version of these notebooks, make a tag of the commit to release, naming it based on the release you want to target.
 
