@@ -13,7 +13,7 @@ awk -v start="$START_MARKER" -v end="$END_MARKER" '
         print $0
         print ""
         print "```"
-        system("tree -L 2 -I \"scripts|README.md|assets\" | sed '\''$d'\''")
+        system("LC_ALL=C tree -L 2 -I \"scripts|README.md|assets\" | sed '\''$d'\''")
         print "```"
         print ""
         found=1
