@@ -6,7 +6,7 @@ repos:
         entry: ./scripts/update_repo_structure.sh
         language: script
         files: README.md
-        stages: [ commit ]
+        stages: [ pre-commit ]
         always_run: true
   - repo: https://github.com/srstevenson/nb-clean
     rev: 4.0.1
@@ -15,6 +15,5 @@ repos:
         args:
           - --remove-empty-cells
         always_run: true
-        stages: [ commit ]
-        autofix: true
+        stages: [ pre-commit ]
         files: '\.ipynb$'
