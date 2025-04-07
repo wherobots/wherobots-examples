@@ -18,14 +18,15 @@ or your direct support channel if you are a Professional or Enterprise Edition c
 ├── Analyzing_Data
 │   ├── Bring_Your_Own_Model_Raster_Inference.ipynb
 │   ├── Clustering_DBSCAN.ipynb
-│   ├── GPS_Map_Matching.ipynb
 │   ├── Getis_Ord_Gi*.ipynb
+│   ├── GPS_Map_Matching.ipynb
 │   ├── Isochrones.ipynb
 │   ├── K_Nearest_Neighbor_Join.ipynb
 │   ├── Local_Outlier_Factor.ipynb
 │   ├── Object_Detection.ipynb
 │   ├── Raster_Classification.ipynb
 │   └── Raster_Segmentation.ipynb
+├── CONTRIBUTING.md
 ├── Getting_Started
 │   ├── Part_1_Loading_Data.ipynb
 │   ├── Part_2_Reading_Spatial_Files.ipynb
