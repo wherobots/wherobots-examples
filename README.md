@@ -34,7 +34,9 @@ or your direct support channel if you are a Professional or Enterprise Edition c
 ├── Open_Data_Connections
 │   ├── ESA_WorldCover.ipynb
 │   ├── Foursquare_Places.ipynb
+│   ├── NOAA_SWDI.ipynb
 │   └── Overture_Maps.ipynb
+│   └── NOAA_SWDI.ipynb
 └── Reading_and_Writing_Data
     ├── Loading_Common_Spatial_File_Types.ipynb
     ├── Map_Tile_Generation.ipynb
