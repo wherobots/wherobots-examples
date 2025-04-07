@@ -13,7 +13,6 @@ awk -v start="$START_MARKER" -v end="$END_MARKER" '
         print $0
         print ""
         print "```"
-        # Use LC_ALL=C to ensure consistent sorting behavior across systems
         system("LC_ALL=C tree -L 2 -I \"scripts|README.md|assets\" | sed '\''$d'\''")
         print "```"
         print ""

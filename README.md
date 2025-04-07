@@ -26,6 +26,7 @@ or your direct support channel if you are a Professional or Enterprise Edition c
 |   |-- Object_Detection.ipynb
 |   |-- Raster_Classification.ipynb
 |   `-- Raster_Segmentation.ipynb
+|-- CONTRIBUTING.md
 |-- Getting_Started
 |   |-- Part_1_Loading_Data.ipynb
 |   |-- Part_2_Reading_Spatial_Files.ipynb
