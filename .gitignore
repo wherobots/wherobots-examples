@@ -7,3 +7,4 @@ python/wherobots-ai/.ipynb_checkpoints/
 python/wherobots-ai/conf/.ipynb_checkpoints/
 _deprecated
 .DS_Store
+*/.ipynb_checkpoints/

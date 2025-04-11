@@ -1,0 +1,19 @@
+repos:
+  - repo: local
+    hooks:
+      - id: update-repo-structure
+        name: Update repository structure in README
+        entry: ./scripts/update_repo_structure.sh
+        language: script
+        files: README.md
+        stages: [ pre-commit ]
+        always_run: true
+  - repo: https://github.com/srstevenson/nb-clean
+    rev: 4.0.1
+    hooks:
+      - id: nb-clean
+        args:
+          - --remove-empty-cells
+        always_run: false
+        stages: [ pre-commit ]
+        files: '\.ipynb$'
