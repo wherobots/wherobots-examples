@@ -25,7 +25,8 @@ or your direct support channel if you are a Professional or Enterprise Edition c
 |   |-- Local_Outlier_Factor.ipynb
 |   |-- Object_Detection.ipynb
 |   |-- Raster_Classification.ipynb
-|   `-- Raster_Segmentation.ipynb
+|   |-- Raster_Segmentation.ipynb
+|   `-- Raster_Text_To_Segments_Airplanes.ipynb
 |-- CONTRIBUTING.md
 |-- Getting_Started
 |   |-- Part_1_Loading_Data.ipynb
