@@ -1,0 +1,57 @@
+name: Convert Notebooks and Upload to Managed storage
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  convert-and-upload:
+    name: Convert Notebooks and Upload to Managed Storage
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install nbconvert
+
+#      - name: Tmate action
+#        uses: mxschmitt/action-tmate@v3
+
+      - name: Convert Jupyter Notebooks to python scripts
+        run: |
+          echo "checking current folder $(pwd)"
+          echo "checking current folder $(ls -al)"
+          mkdir $RUNNER_TEMP/converted_notebooks
+          echo "using $RUNNER_TEMP/converted_notebooks as output dir"
+          for notebook in $(find . -type f -name "*.ipynb"); do
+            echo "Converting $notebook to python script"
+            jupyter nbconvert --config .github/workflows/config/nbconvert_config.py --to python --template .github/workflows/config/python_nomagic "$notebook" --output-dir=$RUNNER_TEMP/converted_notebooks
+          done
+          echo "Contents of $RUNNER_TEMP/converted_notebooks:"
+          ls $RUNNER_TEMP/converted_notebooks
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.WHEROBOTS_STAGING_OFFICIAL_IAM_ROLE }}
+          role-session-name: integration-testing-file-upload
+          aws-region: us-west-2
+
+      - name: Upload python scripts to Managed storage
+        run: |
+          aws s3 cp $RUNNER_TEMP/converted_notebooks s3://wbts-wbc-rcv7vl73oy/djrm9bs9uf/data/shared/integration-testing-airflow/scripts/ --recursive
