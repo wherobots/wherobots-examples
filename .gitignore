@@ -1,6 +1,10 @@
+Analyzing_Data/.ipynb_checkpoints/
+Analyzing_Data/assets/img/.ipynb_checkpoints/
+python/
 .idea
 python/wherobots-ai/gpu/.ipynb_checkpoints/
 python/wherobots-ai/.ipynb_checkpoints/
 python/wherobots-ai/conf/.ipynb_checkpoints/
 _deprecated
 .DS_Store
+*/.ipynb_checkpoints/
