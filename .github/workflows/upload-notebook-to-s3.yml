@@ -29,9 +29,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install nbconvert
 
-#      - name: Tmate action
-#        uses: mxschmitt/action-tmate@v3
-
       - name: Convert Jupyter Notebooks to python scripts
         run: |
           echo "checking current folder $(pwd)"
