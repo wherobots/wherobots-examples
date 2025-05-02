@@ -15,6 +15,16 @@ class RemoveCodeCellsWithContent(Preprocessor):
             for content in self.content_to_remove:
                 if content in cell.source:
                     cell.source = ""
+                    break
+            # comment out Jupyter magic command like "?"
+            if "?" in cell.source:
+                new_source_lines = []
+                for line in cell.source.splitlines():
+                    if "?" in line:
+                        new_source_lines.append("# " + line)
+                    else:
+                        new_source_lines.append(line)
+                cell.source = "\n".join(new_source_lines)
         return cell, resources
 
 # Export all the notebooks in the current directory to the sphinx_howto format
