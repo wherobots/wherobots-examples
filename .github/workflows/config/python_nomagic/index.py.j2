@@ -1,0 +1,21 @@
+{%- extends 'null.j2' -%}
+
+## set to python3
+{%- block header -%}
+#!/usr/bin/env python3
+# coding: utf-8
+{% endblock header %}
+
+## remove cell counts entirely
+{% block in_prompt %}
+{% if resources.global_content_filter.include_input_prompt -%}
+{% endif %}
+{% endblock in_prompt %}
+
+## remove markdown cells entirely
+{% block markdowncell %}
+{% endblock markdowncell %}
+
+{% block input %}
+{{ cell.source | comment_magics | ipython2python }}    
+{% endblock input %}
