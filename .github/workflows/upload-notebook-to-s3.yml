@@ -42,17 +42,24 @@ jobs:
           echo "Contents of $RUNNER_TEMP/converted_notebooks:"
           ls $RUNNER_TEMP/converted_notebooks
 
-      - name: Upload script files to staging official
-        uses: wherobots/deploy-wherobots-files@v2.1.0
+      - name: Configure AWS credentials for staging account
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          api_key: ${{ secrets.WHEROBOTS_STAGING_API_KEY }}
-          files_dir: "$RUNNER_TEMP/converted_notebooks"
-          script_destination: "s3://wbts-wbc-rcv7vl73oy/djrm9bs9uf/data/shared/integration-testing-airflow/scripts/"
-          staging: "true"
+          role-to-assume: ${{ secrets.WHEROBOTS_STAGING_OFFICIAL_IAM_ROLE }}
+          role-session-name: integration-testing-file-upload
+          aws-region: us-west-2
 
-      - name: Upload script files to prod official
-        uses: wherobots/deploy-wherobots-files@v2.1.0
+      - name: Upload python scripts to staging Managed storage
+        run: |
+          aws s3 cp $RUNNER_TEMP/converted_notebooks s3://wbts-wbc-rcv7vl73oy/djrm9bs9uf/data/shared/integration-testing-airflow/scripts/ --recursive
+
+      - name: Configure AWS credentials for prod account
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          api_key: ${{ secrets.WHEROBOTS_PROD_API_KEY }}
-          files_dir: "$RUNNER_TEMP/converted_notebooks"
-          script_destination: "s3://wbts-wbc-m97rcg45xi/dfqlwcrxlk/data/shared/integration-testing-airflow/scripts/"
+          role-to-assume: ${{ secrets.WHEROBOTS_PROD_OFFICIAL_IAM_ROLE }}
+          role-session-name: integration-testing-file-upload
+          aws-region: us-west-2
+
+      - name: Upload python scripts to prod Managed storage
+        run: |
+          aws s3 cp $RUNNER_TEMP/converted_notebooks s3://wbts-wbc-m97rcg45xi/dfqlwcrxlk/data/shared/integration-testing-airflow/scripts/ --recursive
