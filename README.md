@@ -5,6 +5,14 @@ Those examples provide various examples of spatial analytics and spatial data
 processing use cases showcasing the capabilites of [Apache Sedona](https://sedona.apache.org)
 and [WherobotsDB](https://wherobots.com/wherobots-db/).
 
+## Contributing
+When raising a PR, make sure to run pre-commit hooks to the notebookes are cleaned and the readme is updated.
+```bash
+pre-commit run --all-files
+```
+Sometimes this will fail and update your notebooks or the readme file. Generally, you can rerun the command and it
+will pass as the pre-commit hooks will fix the issues it finds.
+
 ## Support
 
 For questions and support on those examples, please use the
@@ -26,7 +34,8 @@ or your direct support channel if you are a Professional or Enterprise Edition c
 |   |-- Object_Detection.ipynb
 |   |-- Raster_Classification.ipynb
 |   |-- Raster_Segmentation.ipynb
-|   `-- Raster_Text_To_Segments_Airplanes.ipynb
+|   |-- Raster_Text_To_Segments_Airplanes.ipynb
+|   `-- Zonal_Stats_ESAWorldCover_Texas.ipynb
 |-- CONTRIBUTING.md
 |-- Getting_Started
 |   |-- Part_1_Loading_Data.ipynb
