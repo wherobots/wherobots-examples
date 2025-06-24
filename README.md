@@ -13,12 +13,6 @@ pre-commit run --all-files
 Sometimes this will fail and update your notebooks or the readme file. Generally, you can rerun the command and it
 will pass as the pre-commit hooks will fix the issues it finds.
 
-## Support
-
-For questions and support on those examples, please use the
-[Wherobots Community](https://community.wherobots.com) if you are a Community Edition user,
-or your direct support channel if you are a Professional or Enterprise Edition customer.
-
 ## Repository structure
 
 ```
