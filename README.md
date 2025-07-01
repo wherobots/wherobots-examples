@@ -5,11 +5,13 @@ Those examples provide various examples of spatial analytics and spatial data
 processing use cases showcasing the capabilites of [Apache Sedona](https://sedona.apache.org)
 and [WherobotsDB](https://wherobots.com/wherobots-db/).
 
-## Support
-
-For questions and support on those examples, please use the
-[Wherobots Community](https://community.wherobots.com) if you are a Community Edition user,
-or your direct support channel if you are a Professional or Enterprise Edition customer.
+## Contributing
+When raising a PR, make sure to run pre-commit hooks to the notebookes are cleaned and the readme is updated.
+```bash
+pre-commit run --all-files
+```
+Sometimes this will fail and update your notebooks or the readme file. Generally, you can rerun the command and it
+will pass as the pre-commit hooks will fix the issues it finds.
 
 ## Repository structure
 
@@ -26,7 +28,8 @@ or your direct support channel if you are a Professional or Enterprise Edition c
 |   |-- Object_Detection.ipynb
 |   |-- Raster_Classification.ipynb
 |   |-- Raster_Segmentation.ipynb
-|   `-- Raster_Text_To_Segments_Airplanes.ipynb
+|   |-- Raster_Text_To_Segments_Airplanes.ipynb
+|   `-- Zonal_Stats_ESAWorldCover_Texas.ipynb
 |-- CONTRIBUTING.md
 |-- Getting_Started
 |   |-- Part_1_Loading_Data.ipynb
@@ -36,6 +39,7 @@ or your direct support channel if you are a Professional or Enterprise Edition c
 |-- Open_Data_Connections
 |   |-- ESA_WorldCover.ipynb
 |   |-- Foursquare_Places.ipynb
+|   |-- NOAA_SWDI.ipynb
 |   `-- Overture_Maps.ipynb
 `-- Reading_and_Writing_Data
     |-- Loading_Common_Spatial_File_Types.ipynb
