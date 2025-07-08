@@ -45,5 +45,5 @@ c.Exporter.filters = {"comment_magics": comment_magics}
 
 # Add the custom preprocessor to remove cells containing either "SedonaKepler", "create_map", or "add_df"
 c.Exporter.preprocessors = [
-    (RemoveCodeCellsWithContent(["SedonaKepler", "create_map", "add_df", "kepler_map", "map_config.json", "SedonaPyDeck"]))
+    (RemoveCodeCellsWithContent(["SedonaKepler", "create_map", "add_df", "kepler_map", "map_config.json", "SedonaPyDeck", "gdf.plot"]))
 ]
