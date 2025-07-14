@@ -60,3 +60,31 @@ git push origin v1.6.0
 ```
 
 then delete the old release in the Github UI after the tag is made. Create the new release in the Github UI, marking the previous tag to compare against.
+
+## Style Guide
+
+When writing example notebooks, follow these guidelines.
+
+### Prose/Markdown style
+
+- Use `#` (h1) for most section headings. Use `##` (h2) if a second level makes sense. Anything smaller should probably be omitted or simply emphasized with bold text.
+- Do not duplicate lines from a code cell in markdown.
+  - Short excerpts like function or variable names get `code formatting`.
+  - Use code-formatted blocks within markdown cells for full lines of code that are alternates (e.g. a SQL version of something Pythonic in a code block), counter examples, etc.
+- Use bold only for
+  - Presenting or defining a new term.
+  - Create hierarchy when adding another heading level would get cluttered.
+- Use `>` indents for definitions.
+- Focus on the scenario at hand. Use links to docs or other resources for expanded coverage of a topic.
+- Focus on education and reader empowerment. Avoid a promotional tone.
+- Use few or no emojis.
+  - Never use emojis instead of markdown-formattted bullets or numbers; emoji bullets can impede accessibility for people using screen readers.
+
+### Writing about code blocks
+
+The template for writing about code blocks is:
+- Start with a markdown cell with a `#` or `##` line h1 or h2 + a brief conceptual description.
+- Code cell
+  - Comments should be one short line and support or expand what's in prose, as opposed to repeating it.
+  - Whenever possible, cells should output something. If the cell isn't designed to output already (e.g. a map), provide context or confirmation of what happened with calls like `show`, `count`, or `printSchema`.
+- If needed, follow with a markdown cell with explanation of how the code works.
