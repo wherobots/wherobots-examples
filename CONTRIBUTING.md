@@ -68,9 +68,9 @@ When writing example notebooks, follow these guidelines.
 ### Prose/Markdown style
 
 - Use `#` (h1) for most section headings. Use `##` (h2) if a second level makes sense. Anything smaller should probably be omitted or simply emphasized with bold text.
-- Do not duplicate lines from a code cell in markdown.
-  - Short excerpts like function or variable names get `code formatting`.
-  - Use code-formatted blocks within markdown cells for full lines of code that are alternates (e.g. a SQL version of something Pythonic in a code block), counter examples, etc.
+- Put code blocks in markdown cells to show something not also in one of the code cells.
+  - Examples: a Pythonic alternative to SQL or something that should be avoided
+  - Short excerpts like function or variable names are find, and should get `code formatting`.
 - Use bold only for
   - Presenting or defining a new term.
   - Create hierarchy when adding another heading level would get cluttered.
