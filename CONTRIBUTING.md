@@ -67,7 +67,12 @@ When writing example notebooks, follow these guidelines.
 
 ### Prose/Markdown style
 
-- Use `#` (h1) for most section headings. Use `##` (h2) if a second level makes sense. Anything smaller should probably be omitted or simply emphasized with bold text.
+- Start with the small logo: `![Wherobots logo](../assets/img/header-logo.png)`
+- Headings
+  - Use `#` (H1) once in a notebook, as the title.
+  - Use `##` (H2) for most section headings, and `###` (H3) if a second level makes sense.
+  - Anything smaller should probably be omitted or simply emphasized with bold text.
+  - If there's text that comes after the heading, put them in the same cell.
 - Put code blocks in markdown cells to show something not also in one of the code cells.
   - Examples: a Pythonic alternative to SQL or something that should be avoided
   - Short excerpts like function or variable names are find, and should get `code formatting`.
@@ -83,7 +88,7 @@ When writing example notebooks, follow these guidelines.
 ### Writing about code blocks
 
 The template for writing about code blocks is:
-- Start with a markdown cell with a `#` or `##` line h1 or h2 + a brief conceptual description.
+- Start with a markdown cell with a `##` H2 or `###` H3 line + a brief conceptual description.
 - Code cell
   - Comments should be one short line and support or expand what's in prose, as opposed to repeating it.
   - Whenever possible, cells should output something. If the cell isn't designed to output already (e.g. a map), provide context or confirmation of what happened with calls like `show`, `count`, or `printSchema`.
