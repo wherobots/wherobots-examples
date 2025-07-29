@@ -74,7 +74,7 @@ When writing example notebooks, follow these guidelines.
   - Anything smaller should probably be omitted or simply emphasized with bold text.
   - If there's text that comes after the heading, put them in the same cell.
 - Put code blocks in markdown cells to show something not also in one of the code cells.
-  - Examples: a Pythonic alternative to SQL, or something that should be avoided
+  - Examples: a Pythonic alternative to SQL or something that should be avoided
   - Short excerpts like function or variable names are find, and should get `code formatting`.
 - Use bold only for
   - Presenting or defining a new term.
