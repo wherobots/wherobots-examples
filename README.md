@@ -2,15 +2,18 @@
 
 This repository contains the notebook examples that Wherobots provide for customers.
 Those examples provide various examples of spatial analytics and spatial data
-processing use cases showcasing the capabilites of [Apache Sedona](https://sedona.apache.org)
+processing use cases showcasing the capabilities of [Apache Sedona](https://sedona.apache.org)
 and [WherobotsDB](https://wherobots.com/wherobots-db/).
 
 ## Contributing
-When raising a PR, make sure to run pre-commit hooks to the notebookes are cleaned and the readme is updated.
+
+When raising a PR, make sure to run pre-commit hooks to the notebooks are cleaned and the README is updated.
+
 ```bash
 pre-commit run --all-files
 ```
-Sometimes this will fail and update your notebooks or the readme file. Generally, you can rerun the command and it
+
+Sometimes this will fail and update your notebooks or the README file. Generally, you can rerun the command and it
 will pass as the pre-commit hooks will fix the issues it finds.
 
 ## Repository structure
@@ -41,10 +44,17 @@ will pass as the pre-commit hooks will fix the issues it finds.
 |   |-- Foursquare_Places.ipynb
 |   |-- NOAA_SWDI.ipynb
 |   `-- Overture_Maps.ipynb
-`-- Reading_and_Writing_Data
-    |-- Loading_Common_Spatial_File_Types.ipynb
-    |-- Map_Tile_Generation.ipynb
-    `-- STAC_Reader.ipynb
+|-- Reading_and_Writing_Data
+|   |-- Loading_Common_Spatial_File_Types.ipynb
+|   |-- Map_Tile_Generation.ipynb
+|   `-- STAC_Reader.ipynb
+`-- scala
+    |-- Getting_Started.ipynb
+    `-- packaging-example-project
+        |-- pom.xml
+        `-- src
+            |-- main
+            `-- test
 
 ```
 
