@@ -1,8 +1,5 @@
 name: Convert Notebooks and Upload to Managed storage
 on:
-  pull_request:
-    branches:
-      - main
   push:
     branches:
       - main
