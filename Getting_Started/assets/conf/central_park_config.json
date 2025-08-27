@@ -76,7 +76,7 @@
    "pitch": 0,
    "zoom": 14.567274789698715,
    "isSplit": false},
-  "mapStyle": {"styleType": "dark",
+  "mapStyle": {"styleType": "dark-matter",
    "topLayerGroups": {},
    "visibleLayerGroups": {"label": true,
     "road": true,

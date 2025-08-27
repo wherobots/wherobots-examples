@@ -130,7 +130,7 @@
    "pitch": 54.90395491103014,
    "zoom": 12.456022235128147,
    "isSplit": false},
-  "mapStyle": {"styleType": "dark",
+  "mapStyle": {"styleType": "dark-matter",
    "topLayerGroups": {},
    "visibleLayerGroups": {"label": true,
     "road": true,
