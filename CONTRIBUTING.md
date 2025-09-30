@@ -84,12 +84,13 @@ When writing example notebooks, follow these guidelines.
 - Focus on education and reader empowerment. Avoid a promotional tone.
 - Use few or no emojis.
   - Never use emojis instead of markdown-formattted bullets or numbers; emoji bullets can impede accessibility for people using screen readers.
+- For notebooks that are deep-linked as solutions, include a small (~300px wide) version of the thumbnail image above the fold. (See [Getting Started 1 Loading Data](https://github.com/wherobots/wherobots-examples/blob/main/Getting_Started/Part_1_Loading_Data.ipynb) for an example.)
 
-### Writing about code blocks
+### Code blocks and style
 
-The template for writing about code blocks is:
-- Start with a markdown cell with a `##` H2 or `###` H3 line + a brief conceptual description.
-- Code cell
-  - Comments should be one short line and support or expand what's in prose, as opposed to repeating it.
-  - Whenever possible, cells should output something. If the cell isn't designed to output already (e.g. a map), provide context or confirmation of what happened with calls like `show`, `count`, or `printSchema`.
-- If needed, follow with a markdown cell with explanation of how the code works.
+- Precede most code cells with with a markdown cell with a `##` H2 or `###` H3 headline to facilitate rapid scanning.
+  - Do include a brief description for new topics. Don't describe anything covered in the Getting Started notebooks (e.g. getting the `sedona` context).
+  - In general, write about code above it rather than below it.
+- Comments should be one short line and support or expand what's in prose, as opposed to repeating it.
+- Whenever possible, cells should output something. If the cell isn't designed to output already (e.g. a map), provide context or confirmation of what happened with calls like `show`, `count`, or `printSchema`.
+- Always use [`wkls`](https://github.com/wherobots/wkls) instead of hard-coding admin boundaries.
