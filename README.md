@@ -34,8 +34,6 @@ will pass as the pre-commit hooks will fix the issues it finds.
 |   |-- Raster_Text_To_Segments_Airplanes.ipynb
 |   `-- Zonal_Stats_ESAWorldCover_Texas.ipynb
 |-- CONTRIBUTING.md
-|-- Foreign_Catalogs
-|   `-- Unity_Catalog_Delta_Tables.ipynb
 |-- Getting_Started
 |   |-- Part_1_Loading_Data.ipynb
 |   |-- Part_2_Reading_Spatial_Files.ipynb
@@ -49,7 +47,8 @@ will pass as the pre-commit hooks will fix the issues it finds.
 |-- Reading_and_Writing_Data
 |   |-- Loading_Common_Spatial_File_Types.ipynb
 |   |-- Map_Tile_Generation.ipynb
-|   `-- STAC_Reader.ipynb
+|   |-- STAC_Reader.ipynb
+|   `-- Unity_Catalog_Delta_Tables.ipynb
 `-- scala
     |-- Getting_Started.ipynb
     `-- packaging-example-project
