@@ -32,7 +32,7 @@ will pass as the pre-commit hooks will fix the issues it finds.
 |   |-- PMTiles-railroad.ipynb
 |   |-- Raster_Classification.ipynb
 |   |-- Raster_Segmentation.ipynb
-|   |-- Raster_Text_To_Segments_Airplanes.ipynb
+|   |-- Raster_Text_To_Segments.ipynb
 |   `-- Zonal_Stats_ESAWorldCover_Texas.ipynb
 |-- CONTRIBUTING.md
 |-- Getting_Started
