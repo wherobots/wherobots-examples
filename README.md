@@ -19,6 +19,48 @@ will pass as the pre-commit hooks will fix the issues it finds.
 ## Repository structure
 
 ```
+.
+|-- Analyzing_Data
+|   |-- Bring_Your_Own_Model_Raster_Inference.ipynb
+|   |-- Clustering_DBSCAN.ipynb
+|   |-- GPS_Map_Matching.ipynb
+|   |-- Getis_Ord_Gi*.ipynb
+|   |-- Isochrones.ipynb
+|   |-- K_Nearest_Neighbor_Join.ipynb
+|   |-- Local_Outlier_Factor.ipynb
+|   |-- Object_Detection.ipynb
+|   |-- PMTiles-railroad.ipynb
+|   |-- RasterFlow_CHM.ipynb
+|   |-- RasterFlow_FTW.ipynb
+|   |-- RasterFlow_Tile2Net.ipynb
+|   |-- Raster_Classification.ipynb
+|   |-- Raster_Segmentation.ipynb
+|   |-- Raster_Text_To_Segments_Airplanes.ipynb
+|   `-- Zonal_Stats_ESAWorldCover_Texas.ipynb
+|-- CONTRIBUTING.md
+|-- Getting_Started
+|   |-- Part_1_Loading_Data.ipynb
+|   |-- Part_2_Reading_Spatial_Files.ipynb
+|   |-- Part_3_Accelerating_Geospatial_Datasets.ipynb
+|   `-- Part_4_Spatial_Joins.ipynb
+|-- Open_Data_Connections
+|   |-- ESA_WorldCover.ipynb
+|   |-- Foursquare_Places.ipynb
+|   |-- NOAA_SWDI.ipynb
+|   `-- Overture_Maps.ipynb
+|-- Reading_and_Writing_Data
+|   |-- Loading_Common_Spatial_File_Types.ipynb
+|   |-- Map_Tile_Generation.ipynb
+|   |-- STAC_Reader.ipynb
+|   `-- Unity_Catalog_Delta_Tables.ipynb
+`-- scala
+    |-- Getting_Started.ipynb
+    `-- packaging-example-project
+        |-- pom.xml
+        `-- src
+            |-- main
+            `-- test
+
 ```
 
 ### Assets folder
