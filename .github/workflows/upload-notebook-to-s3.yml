@@ -13,16 +13,16 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
+      contents: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: "3.x"
 
       - name: Install dependencies
         run: |
@@ -30,6 +30,7 @@ jobs:
           pip install nbconvert
 
       - name: Convert Jupyter Notebooks to python scripts
+        id: convert-notebooks
         run: |
           echo "checking current folder $(pwd)"
           echo "checking current folder $(ls -al)"
@@ -41,6 +42,8 @@ jobs:
           done
           echo "Contents of $RUNNER_TEMP/converted_notebooks:"
           ls $RUNNER_TEMP/converted_notebooks
+          tar -czf $RUNNER_TEMP/converted_notebooks.tar.gz -C $RUNNER_TEMP converted_notebooks
+          echo "output_path=$RUNNER_TEMP/converted_notebooks.tar.gz" >> $GITHUB_OUTPUT
 
       - name: Configure AWS credentials for staging account
         uses: aws-actions/configure-aws-credentials@v4
@@ -63,3 +66,21 @@ jobs:
       - name: Upload python scripts to prod Managed storage
         run: |
           aws s3 cp $RUNNER_TEMP/converted_notebooks s3://wbts-wbc-m97rcg45xi/dfqlwcrxlk/data/shared/integration-testing-airflow/scripts/ --recursive
+
+      # We use a mutable git tag / github release called `converted-notebooks` to always point to the latest converted notebooks
+
+      - name: Update Converted Notebooks git tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -f converted-notebooks
+          git push origin converted-notebooks --force
+
+      - name: Update Converted Notebooks Github Release
+        uses: softprops/action-gh-release@v2.5.0
+        with:
+          files: ${{ steps.convert-notebooks.outputs.output_path }}
+          name: converted-notebooks
+          tag_name: converted-notebooks
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
