@@ -1,4 +1,4 @@
-name: Convert Notebooks and Upload to Managed storage
+name: Convert Notebooks to Python Scripts
 on:
   push:
     branches:
@@ -6,10 +6,9 @@ on:
 
 jobs:
   convert-and-upload:
-    name: Convert Notebooks and Upload to Managed Storage
+    name: Convert Notebooks to Python Scripts
     runs-on: ubuntu-latest
     permissions:
-      id-token: write
       contents: write
 
     steps:
@@ -41,28 +40,6 @@ jobs:
           ls $RUNNER_TEMP/converted_notebooks
           tar -czf $RUNNER_TEMP/converted_notebooks.tar.gz -C $RUNNER_TEMP converted_notebooks
           echo "output_path=$RUNNER_TEMP/converted_notebooks.tar.gz" >> $GITHUB_OUTPUT
-
-      - name: Configure AWS credentials for staging account
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.WHEROBOTS_STAGING_OFFICIAL_IAM_ROLE }}
-          role-session-name: integration-testing-file-upload
-          aws-region: us-west-2
-
-      - name: Upload python scripts to staging Managed storage
-        run: |
-          aws s3 cp $RUNNER_TEMP/converted_notebooks s3://wbts-wbc-rcv7vl73oy/djrm9bs9uf/data/shared/integration-testing-airflow/scripts/ --recursive
-
-      - name: Configure AWS credentials for prod account
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.WHEROBOTS_PROD_OFFICIAL_IAM_ROLE }}
-          role-session-name: integration-testing-file-upload
-          aws-region: us-west-2
-
-      - name: Upload python scripts to prod Managed storage
-        run: |
-          aws s3 cp $RUNNER_TEMP/converted_notebooks s3://wbts-wbc-m97rcg45xi/dfqlwcrxlk/data/shared/integration-testing-airflow/scripts/ --recursive
 
       # We use a mutable git tag / github release called `converted-notebooks` to always point to the latest converted notebooks
 
