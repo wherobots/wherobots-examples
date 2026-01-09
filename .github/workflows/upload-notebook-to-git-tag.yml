@@ -1,8 +1,11 @@
-name: Convert Notebooks to Python Scripts
+name: Upload Converted Notebooks to Git Tag
 on:
   push:
     branches:
       - main
+    tags:
+      - "v**"
+  workflow_dispatch:
 
 jobs:
   convert-and-upload:
@@ -41,9 +44,22 @@ jobs:
           tar -czf $RUNNER_TEMP/converted_notebooks.tar.gz -C $RUNNER_TEMP converted_notebooks
           echo "output_path=$RUNNER_TEMP/converted_notebooks.tar.gz" >> $GITHUB_OUTPUT
 
-      # We use a mutable git tag / github release called `converted-notebooks` to always point to the latest converted notebooks
+      # For versioned git tags (e.g., v1.0.0), we create a corresponding github release with the converted notebooks
+
+      - name: Create Release for Tagged Notebooks
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2.5.0
+        with:
+          files: ${{ steps.convert-notebooks.outputs.output_path }}
+          name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # For pushes to `main`, we use a mutable git tag / github release called `converted-notebooks` to always point to the latest converted notebooks
 
       - name: Update Converted Notebooks git tag
+        if: github.ref_type == 'branch'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -51,6 +67,7 @@ jobs:
           git push origin converted-notebooks --force
 
       - name: Update Converted Notebooks Github Release
+        if: github.ref_type == 'branch'
         uses: softprops/action-gh-release@v2.5.0
         with:
           files: ${{ steps.convert-notebooks.outputs.output_path }}
