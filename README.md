@@ -21,23 +21,23 @@ will pass as the pre-commit hooks will fix the issues it finds.
 ```
 .
 |-- Analyzing_Data
-|   |-- Bring_Your_Own_Model_RasterFlow.ipynb
-|   |-- Bring_Your_Own_Model_Raster_Inference.ipynb
 |   |-- Clustering_DBSCAN.ipynb
 |   |-- GPS_Map_Matching.ipynb
 |   |-- Getis_Ord_Gi*.ipynb
 |   |-- Isochrones.ipynb
 |   |-- K_Nearest_Neighbor_Join.ipynb
 |   |-- Local_Outlier_Factor.ipynb
-|   |-- Object_Detection.ipynb
 |   |-- PMTiles-railroad.ipynb
+|   |-- RasterFlow_Bring_Your_Own_Model.ipynb
 |   |-- RasterFlow_CHM.ipynb
 |   |-- RasterFlow_Chesapeake.ipynb
 |   |-- RasterFlow_FTW.ipynb
 |   |-- RasterFlow_Tile2Net.ipynb
-|   |-- Raster_Classification.ipynb
-|   |-- Raster_Segmentation.ipynb
-|   |-- Raster_Text_To_Segments_Airplanes.ipynb
+|   |-- Raster_Inference_Bring_Your_Own_Model.ipynb
+|   |-- Raster_Inference_Classification.ipynb
+|   |-- Raster_Inference_Object_Detection.ipynb
+|   |-- Raster_Inference_Segmentation.ipynb
+|   |-- Raster_Inference_Text_To_Segments_Airplanes.ipynb
 |   `-- Zonal_Stats_ESAWorldCover_Texas.ipynb
 |-- CONTRIBUTING.md
 |-- Getting_Started
