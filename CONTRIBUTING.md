@@ -80,9 +80,6 @@ When writing example notebooks, follow these guidelines.
 - Put code blocks in markdown cells *only* when it is not also used in one of the code cells.
   - Examples: a Pythonic alternative to SQL or something that should be avoided
   - Function or variable names should be enclosed in `code formatting`.
-- Use bold only for
-  - Presenting or defining a new term.
-  - Creating hierarchy when adding another heading level would get cluttered.
 - Use `>` indents for definitions.
 
 #### Writing style
