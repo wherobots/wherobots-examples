@@ -77,8 +77,9 @@ When writing example notebooks, follow these guidelines.
   - Use `##` (H2) for most section headings, and `###` (H3) if a second level makes sense.
   - Anything smaller should probably be omitted or simply emphasized with bold text.
   - If there's text that comes after the heading, put them in the same cell.
-- Put code blocks in markdown cells *only* when it is not also used in one of the code cells.
-  - Examples: a Pythonic alternative to SQL or something that should be avoided
+- Avoid duplicating code in both markdown cells and executable code cells. To keep notebooks succinct, use code blocks in markdown cells only when:
+  - The code should not be executed (e.g., showing long-running code, alternative approaches, or code to avoid)
+  - Examples: a Pythonic alternative to SQL, code that demonstrates an anti-pattern, or code with placeholders
   - Function or variable names should be enclosed in `code formatting`.
 - Use `>` indents for definitions.
 
