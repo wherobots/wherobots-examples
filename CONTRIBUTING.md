@@ -95,7 +95,16 @@ When writing example notebooks, follow these guidelines.
 
 ### Code blocks and style
 
-- Precede most code cells with with a markdown cell with a `##` H2 or `###` H3 headline to facilitate rapid scanning.
+- Precede code cells with with a markdown cell with a `##` H2 or `###` H3 headline to facilitate rapid scanning.
+
+For example:
+
+> ### Isochrone implementation example
+> 
+> ```
+> ST_Isochrone(geometry, 1, 'car', false)
+> ```
+
   - Do include a brief description for new topics. 
   - Don't describe anything covered in the Getting Started notebooks (e.g. getting the `sedona` context).
   - Describe the code block before (above) the code block. Use comments to call out specific, interesting parameters or functions.
