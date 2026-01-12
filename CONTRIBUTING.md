@@ -79,14 +79,13 @@ When writing example notebooks, follow these guidelines.
   - If there's text that comes after the heading, put them in the same cell.
 - Put code blocks in markdown cells *only* when it is not also used in one of the code cells.
   - Examples: a Pythonic alternative to SQL or something that should be avoided
-  - Short excerpts like function or variable names are fine, and should get `code formatting`.
+  - Function or variable names should be enclosed in `code formatting`.
 - Use bold only for presenting or defining a new term.
 - Use `>` indents for definitions.
 
 #### Writing style
 
 - Focus on the scenario at hand. Use links to docs or other resources for expanded coverage of a topic.
-  - When linking to docs, remove any `?h=foo` query string parameters. (This turns off any search term highlighting.)
 - Focus on education and reader empowerment. Avoid a promotional tone.
 - Use few or no emojis.
   - Never use emojis instead of markdown-formattted bullets or numbers. Emoji bullets can impede accessibility for people using screen readers.
