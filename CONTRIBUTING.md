@@ -88,7 +88,6 @@ When writing example notebooks, follow these guidelines.
 #### Writing style
 
 - Focus on the scenario at hand. Use links to docs or other resources for expanded coverage of a topic.
-  - When linking to docs, remove any `?h=foo` query string parameters. (This turns off any search term highlighting.)
 - Focus on education and reader empowerment. Avoid a promotional tone.
 - Use few or no emojis.
   - Never use emojis instead of markdown-formattted bullets or numbers. Emoji bullets can impede accessibility for people using screen readers.
