@@ -67,29 +67,44 @@ When writing example notebooks, follow these guidelines.
 
 ### Prose/Markdown style
 
-- Start with the small logo: `![Wherobots logo](../assets/img/header-logo.png)`
+#### Technical points
+
+- Opening image
+  - If this is a solution notebook, start with a banner that repeats the imagery used for the notebook's thumbnail. It should be about 1200x220 px. (See [Generate PMTiles using Wherobots](https://github.com/wherobots/wherobots-examples/blob/main/Analyzing_Data/PMTiles-railroad.ipynb) for an example.)
+  - Otherwise, start with this small logo: `![Wherobots logo](../assets/img/header-logo.png)`
 - Headings
-  - Use `#` (H1) once in a notebook, as the title.
+  - Use `#` (H1) once in a notebook, as the title that immediately follows the opening image.
   - Use `##` (H2) for most section headings, and `###` (H3) if a second level makes sense.
   - Anything smaller should probably be omitted or simply emphasized with bold text.
   - If there's text that comes after the heading, put them in the same cell.
-- Put code blocks in markdown cells to show something not also in one of the code cells.
-  - Examples: a Pythonic alternative to SQL or something that should be avoided
-  - Short excerpts like function or variable names are find, and should get `code formatting`.
-- Use bold only for
-  - Presenting or defining a new term.
-  - Create hierarchy when adding another heading level would get cluttered.
+- Avoid duplicating code in both markdown cells and executable code cells. To keep notebooks succinct, use code blocks in markdown cells only when:
+  - The code should not be executed (e.g., showing long-running code, alternative approaches, or code to avoid)
+  - Examples: a Pythonic alternative to SQL, code that demonstrates an anti-pattern, or code with placeholders
+  - Function or variable names should be enclosed in `code formatting`.
 - Use `>` indents for definitions.
+
+#### Writing style
+
 - Focus on the scenario at hand. Use links to docs or other resources for expanded coverage of a topic.
 - Focus on education and reader empowerment. Avoid a promotional tone.
 - Use few or no emojis.
-  - Never use emojis instead of markdown-formattted bullets or numbers; emoji bullets can impede accessibility for people using screen readers.
+  - Never use emojis instead of markdown-formattted bullets or numbers. Emoji bullets can impede accessibility for people using screen readers.
 
-### Writing about code blocks
+### Code blocks and style
 
-The template for writing about code blocks is:
-- Start with a markdown cell with a `##` H2 or `###` H3 line + a brief conceptual description.
-- Code cell
-  - Comments should be one short line and support or expand what's in prose, as opposed to repeating it.
-  - Whenever possible, cells should output something. If the cell isn't designed to output already (e.g. a map), provide context or confirmation of what happened with calls like `show`, `count`, or `printSchema`.
-- If needed, follow with a markdown cell with explanation of how the code works.
+- Precede code cells with with a markdown cell with a `##` H2 or `###` H3 headline to facilitate rapid scanning.
+
+For example:
+
+> ### Isochrone implementation example
+> 
+> ```
+> ST_Isochrone(geometry, 1, 'car', false)
+> ```
+
+  - Do include a brief description for new topics. 
+  - Don't describe anything covered in the Getting Started notebooks (e.g. getting the `sedona` context).
+  - Describe the code block before (above) the code block. Use comments to call out specific, interesting parameters or functions.
+- Comments should be one short line and support or expand what's in prose, as opposed to repeating it.
+- Whenever possible, cells should output something. If the cell isn't designed to output already (e.g. a map), provide context or confirmation of what happened with calls like `show`, `count`, or `printSchema`.
+- Always use [`wkls`](https://github.com/wherobots/wkls) instead of hard-coding admin boundaries.
