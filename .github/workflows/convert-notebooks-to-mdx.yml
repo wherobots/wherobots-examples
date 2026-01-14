@@ -1,0 +1,298 @@
+name: Sync Notebook Examples to Docs
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**/*.ipynb'
+  pull_request:
+    paths:
+      - '**/*.ipynb'
+  workflow_dispatch:
+    inputs:
+      force_all:
+        description: 'Force conversion of all notebooks'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  convert-notebooks:
+    name: Convert Notebooks to MDX
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    outputs:
+      has_changes: ${{ steps.check-changes.outputs.has_changes }}
+      file_count: ${{ steps.list-files.outputs.file_count }}
+
+    steps:
+      - name: Checkout wherobots-examples
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for diff
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Determine notebooks to convert
+        id: get-notebooks
+        run: |
+          # Always convert all notebooks to ensure navigation is complete
+          echo "Converting all notebooks..."
+          NOTEBOOKS=$(find . -type f -name "*.ipynb" ! -name "Raster_Inference*" | sort | tr '\n' ' ')
+
+          echo "Notebooks to convert: $NOTEBOOKS"
+          echo "notebooks=$NOTEBOOKS" >> $GITHUB_OUTPUT
+
+          # Count notebooks
+          COUNT=$(echo "$NOTEBOOKS" | wc -w)
+          echo "count=$COUNT" >> $GITHUB_OUTPUT
+
+      - name: Create output directory
+        run: mkdir -p ${{ runner.temp }}/mdx_output
+
+      - name: Convert notebooks to MDX
+        run: |
+          for notebook in ${{ steps.get-notebooks.outputs.notebooks }}; do
+            if [ -f "$notebook" ]; then
+              echo "Converting: $notebook"
+
+              # Determine output subdirectory and category
+              dir_name=$(dirname "$notebook" | sed 's|^\./||')
+              category=$(echo "$dir_name" | cut -d'/' -f1)
+              output_subdir="${{ runner.temp }}/mdx_output/${dir_name}"
+              mkdir -p "$output_subdir"
+
+              python .github/workflows/scripts/convert_notebook_to_mdx.py \
+                "$notebook" "$output_subdir" \
+                --category "$category" \
+                --verbose
+            fi
+          done
+
+      - name: List converted files
+        id: list-files
+        run: |
+          echo "Converted MDX files:"
+          find ${{ runner.temp }}/mdx_output -name "*.mdx" -type f | tee /tmp/converted_files.txt
+          echo "file_count=$(wc -l < /tmp/converted_files.txt | tr -d ' ')" >> $GITHUB_OUTPUT
+
+      - name: Check for changes
+        id: check-changes
+        run: |
+          if [ -s /tmp/converted_files.txt ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload converted MDX files
+        uses: actions/upload-artifact@v4
+        with:
+          name: mdx-files
+          path: ${{ runner.temp }}/mdx_output
+          retention-days: 7
+
+      # Comment on PR with conversion summary
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let files = [];
+            try {
+              files = fs.readFileSync('/tmp/converted_files.txt', 'utf8').trim().split('\n').filter(f => f);
+            } catch (e) {
+              files = [];
+            }
+
+            const body = `## Notebook to MDX Conversion Preview
+
+            This PR modifies **${files.length}** notebook(s) that will be converted to MDX and synced to the docs repository.
+
+            ### Files to be Updated
+            ${files.map(f => {
+              const rel = f.split('/mdx_output/')[1] || f;
+              return `- \`examples/${rel}\``;
+            }).join('\n')}
+
+            ### What happens next?
+            When this PR is merged to \`main\`:
+            1. All notebooks will be converted to MDX format
+            2. A PR will be automatically created in \`wherobots/docs\`
+            3. The Examples tab navigation will be auto-generated
+            4. Merge the docs PR to publish the changes
+
+            ### Local Preview
+            \`\`\`bash
+            # Preview all notebooks locally
+            .github/workflows/scripts/preview_notebooks.sh
+            \`\`\`
+            `;
+
+            // Check for existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(c => 
+              c.user.type === 'Bot' && c.body.includes('Notebook to MDX Conversion')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }
+
+  create-docs-pr:
+    name: Create Docs PR
+    needs: convert-notebooks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.convert-notebooks.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout wherobots-examples (for scripts)
+        uses: actions/checkout@v4
+        with:
+          path: examples-repo
+
+      - name: Download converted MDX files
+        uses: actions/download-artifact@v4
+        with:
+          name: mdx-files
+          path: mdx_output
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Checkout docs repository
+        uses: actions/checkout@v4
+        with:
+          repository: wherobots/docs
+          token: ${{ secrets.DOCS_REPO_TOKEN }}
+          path: docs-repo
+
+      - name: Sync MDX files to docs repository
+        run: |
+          TARGET_DIR="docs-repo/examples"
+
+          # Remove existing examples to handle deletions
+          rm -rf "$TARGET_DIR"
+          mkdir -p "$TARGET_DIR"
+
+          # Copy all converted MDX files
+          if [ -d "mdx_output" ]; then
+            cp -r mdx_output/* "$TARGET_DIR/"
+            echo "Copied MDX files to $TARGET_DIR"
+          fi
+
+          # List synced files
+          echo ""
+          echo "Files synced to docs repository:"
+          find "$TARGET_DIR" -name "*.mdx" -type f | sort
+
+      - name: Update navigation in docs.json
+        run: |
+          python examples-repo/.github/workflows/scripts/generate_navigation.py \
+            docs-repo/examples \
+            docs-repo/docs.json
+
+          echo ""
+          echo "Updated docs.json navigation"
+
+      - name: Create or update PR
+        working-directory: docs-repo
+        env:
+          GH_TOKEN: ${{ secrets.DOCS_REPO_TOKEN }}
+        run: |
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Check if there are any changes
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          # Create branch name based on date
+          BRANCH_NAME="sync-examples-$(date +%Y%m%d-%H%M%S)"
+          SOURCE_SHA="${{ github.sha }}"
+          SHORT_SHA="${SOURCE_SHA:0:7}"
+
+          # Create and checkout branch
+          git checkout -b "$BRANCH_NAME"
+
+          # Stage all changes
+          git add examples/ docs.json
+
+          # Create commit
+          git commit -m "docs: sync notebook examples from wherobots-examples
+
+          Automated sync of Jupyter notebook examples converted to MDX format.
+
+          Source: wherobots/wherobots-examples@${SHORT_SHA}
+          Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          Changes include:
+          - Updated MDX files in examples/
+          - Auto-generated navigation for Examples tab"
+
+          # Push branch
+          git push origin "$BRANCH_NAME"
+
+          # Create PR
+          PR_BODY=$(cat <<'EOF'
+          ## Sync Notebook Examples
+
+          This PR syncs notebook examples from `wherobots/wherobots-examples` to the documentation.
+
+          ### Changes
+          - Updated MDX files in `examples/` directory
+          - Auto-generated navigation for the **Examples** tab in `docs.json`
+
+          ### Source
+          - Repository: `wherobots/wherobots-examples`
+          - Commit: ${{ github.sha }}
+          - Workflow: [View run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+          ### Review Checklist
+          - [ ] Preview the changes using `mint dev`
+          - [ ] Verify the Examples tab navigation looks correct
+          - [ ] Check that MDX files render properly
+
+          ---
+          *This PR was automatically generated. Merge to publish the changes.*
+          EOF
+          )
+
+          gh pr create \
+            --title "docs: sync notebook examples (${SHORT_SHA})" \
+            --body "$PR_BODY" \
+            --base main \
+            --head "$BRANCH_NAME"
+
+          echo ""
+          echo "Pull request created successfully!"
