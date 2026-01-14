@@ -54,16 +54,14 @@ command and it will pass as the pre-commit hooks will fix the issues it finds.
 |   |-- Loading_Common_Spatial_File_Types.ipynb
 |   |-- Map_Tile_Generation.ipynb
 |   |-- STAC_Reader.ipynb
-|   |-- Unity_Catalog_Delta_Tables.ipynb
-|   `-- Unity_Catalog_Delta_Tables.md
-|-- scala
-|   |-- Getting_Started.ipynb
-|   `-- packaging-example-project
-|       |-- pom.xml
-|       `-- src
-|           |-- main
-|           `-- test
-`-- test-data-products.csv
+|   `-- Unity_Catalog_Delta_Tables.ipynb
+`-- scala
+    |-- Getting_Started.ipynb
+    `-- packaging-example-project
+        |-- pom.xml
+        `-- src
+            |-- main
+            `-- test
 
 ```
 
