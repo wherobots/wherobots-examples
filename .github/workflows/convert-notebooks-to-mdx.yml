@@ -169,6 +169,8 @@ jobs:
     needs: convert-notebooks
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.convert-notebooks.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout wherobots-examples (for scripts)
