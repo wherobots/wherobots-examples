@@ -13,8 +13,8 @@ When raising a PR, make sure to run pre-commit hooks to the notebooks are cleane
 pre-commit run --all-files
 ```
 
-Sometimes this will fail and update your notebooks or the README file. Generally, you can rerun the command and it
-will pass as the pre-commit hooks will fix the issues it finds.
+Sometimes this will fail and update your notebooks or the README file. Generally, you can rerun the
+command and it will pass as the pre-commit hooks will fix the issues it finds.
 
 ## Repository structure
 
