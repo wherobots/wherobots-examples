@@ -40,7 +40,6 @@ command and it will pass as the pre-commit hooks will fix the issues it finds.
 |   |-- Raster_Inference_Text_To_Segments_Airplanes.ipynb
 |   `-- Zonal_Stats_ESAWorldCover_Texas.ipynb
 |-- CONTRIBUTING.md
-|-- Foreign_Catalogs
 |-- Getting_Started
 |   |-- Part_1_Loading_Data.ipynb
 |   |-- Part_2_Reading_Spatial_Files.ipynb
