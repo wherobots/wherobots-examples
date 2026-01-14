@@ -7,7 +7,7 @@ and [WherobotsDB](https://wherobots.com/wherobots-db/).
 
 ## Contributing
 
-When raising a PR, make sure to run pre-commit hooks to ensure that the notebooks are cleaned and the README is updated.
+When raising a PR, make sure to run pre-commit hooks to ensure that the notebooks are cleaned and the `README` is updated.
 
 ```bash
 pre-commit run --all-files
