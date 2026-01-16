@@ -30,6 +30,7 @@ will pass as the pre-commit hooks will fix the issues it finds.
 |   |-- PMTiles-railroad.ipynb
 |   |-- RasterFlow_Bring_Your_Own_Model.ipynb
 |   |-- RasterFlow_CHM.ipynb
+|   |-- RasterFlow_ChangeDetection.ipynb
 |   |-- RasterFlow_Chesapeake.ipynb
 |   |-- RasterFlow_FTW.ipynb
 |   |-- RasterFlow_Tile2Net.ipynb
