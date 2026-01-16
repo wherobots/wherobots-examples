@@ -10,6 +10,7 @@
 #
 # Options:
 #   -n, --notebook <path>  Convert and preview a specific notebook
+#   -s, --source <dir>     Source directory for notebooks (default: repo root)
 #   -a, --all              Convert all notebooks (default)
 #   -p, --port <port>      Port for preview server (default: 3000)
 #   -o, --output <dir>     Output directory (default: .preview)
@@ -28,6 +29,7 @@ NAVIGATION_SCRIPT="$SCRIPT_DIR/generate_navigation.py"
 PORT=3000
 CONVERT_ALL=true
 SPECIFIC_NOTEBOOK=""
+SOURCE_DIR=""
 
 # Colors for output
 RED='\033[0;31m'
@@ -45,13 +47,15 @@ Usage:
 
 Options:
   -n, --notebook <path>  Convert and preview a specific notebook
+  -s, --source <dir>     Source directory for notebooks (default: repo root)
+                         Use this to preview executed notebooks with outputs
   -a, --all              Convert all notebooks (default)
   -p, --port <port>      Port for preview server (default: 3000)
   -o, --output <dir>     Output directory (default: .preview)
   -h, --help             Show this help message
 
 Examples:
-  # Preview all notebooks
+  # Preview all notebooks (without outputs)
   ./preview_notebooks.sh
 
   # Preview a specific notebook
@@ -59,6 +63,10 @@ Examples:
 
   # Preview on a different port
   ./preview_notebooks.sh -p 3333
+
+  # Preview executed notebooks with outputs (after downloading from S3)
+  aws s3 sync s3://your-bucket/notebook-runs/<run-id>/output/ ./executed_notebooks/
+  ./preview_notebooks.sh --source ./executed_notebooks
 
 Requirements:
   - Python 3.8+
@@ -96,6 +104,7 @@ setup_preview_directory() {
 {
   "$schema": "https://mintlify.com/schema.json",
   "name": "Wherobots Examples Preview",
+  "theme": "aspen",
   "logo": {
     "dark": "https://wherobots.com/wp-content/uploads/2023/06/wherobots-logo-white.svg",
     "light": "https://wherobots.com/wp-content/uploads/2023/06/wherobots-logo.svg"
@@ -104,11 +113,7 @@ setup_preview_directory() {
   "colors": {
     "primary": "#0D9373",
     "light": "#07C983",
-    "dark": "#0D9373",
-    "anchors": {
-      "from": "#0D9373",
-      "to": "#07C983"
-    }
+    "dark": "#0D9373"
   },
   "navigation": {
     "tabs": [
@@ -144,7 +149,7 @@ icon: "house"
 
 # Welcome to Wherobots Examples
 
-This documentation contains examples converted from Jupyter notebooks in the 
+This documentation contains examples converted from Jupyter notebooks in the
 [wherobots-examples](https://github.com/wherobots/wherobots-examples) repository.
 
 ## Categories
@@ -172,28 +177,44 @@ convert_notebooks() {
     echo -e "${BLUE}Converting notebooks to MDX...${NC}"
 
     local output_dir="$PREVIEW_DIR/examples"
+    
+    # Determine the source directory for notebooks
+    local notebook_source_dir
+    if [ -n "$SOURCE_DIR" ]; then
+        notebook_source_dir="$SOURCE_DIR"
+        echo "Using custom source directory: $notebook_source_dir"
+    else
+        notebook_source_dir="$REPO_ROOT"
+    fi
 
     if [ -n "$SPECIFIC_NOTEBOOK" ]; then
         # Convert specific notebook
-        local notebook_path="$REPO_ROOT/$SPECIFIC_NOTEBOOK"
-        if [ ! -f "$notebook_path" ]; then
-            echo -e "${RED}Error: Notebook not found: $notebook_path${NC}"
+        local notebook_path
+        if [ -f "$SPECIFIC_NOTEBOOK" ]; then
+            # Absolute or relative path provided
+            notebook_path="$SPECIFIC_NOTEBOOK"
+        elif [ -f "$notebook_source_dir/$SPECIFIC_NOTEBOOK" ]; then
+            # Path relative to source dir
+            notebook_path="$notebook_source_dir/$SPECIFIC_NOTEBOOK"
+        else
+            echo -e "${RED}Error: Notebook not found: $SPECIFIC_NOTEBOOK${NC}"
             exit 1
         fi
 
         # Determine category from path
-        local category=$(dirname "$SPECIFIC_NOTEBOOK" | cut -d'/' -f1)
+        local rel_path="${notebook_path#$notebook_source_dir/}"
+        local category=$(dirname "$rel_path" | cut -d'/' -f1)
         local subdir="$output_dir/$category"
         mkdir -p "$subdir"
 
         python3 "$CONVERT_SCRIPT" "$notebook_path" "$subdir" --category "$category" --verbose
     else
         # Convert all notebooks
-        echo "Scanning for notebooks in: $REPO_ROOT"
+        echo "Scanning for notebooks in: $notebook_source_dir"
 
         local count=0
         while IFS= read -r -d '' notebook; do
-            local rel_path="${notebook#$REPO_ROOT/}"
+            local rel_path="${notebook#$notebook_source_dir/}"
             local filename=$(basename "$notebook")
 
             # Skip excluded notebooks
@@ -211,7 +232,7 @@ convert_notebooks() {
             python3 "$CONVERT_SCRIPT" "$notebook" "$subdir" --category "$category"
 
             ((count++))
-        done < <(find "$REPO_ROOT" -name "*.ipynb" -type f -print0 | sort -z)
+        done < <(find "$notebook_source_dir" -name "*.ipynb" -type f -print0 | sort -z)
 
         echo -e "${GREEN}Converted $count notebooks.${NC}"
     fi
@@ -252,6 +273,10 @@ while [[ $# -gt 0 ]]; do
         -n|--notebook)
             SPECIFIC_NOTEBOOK="$2"
             CONVERT_ALL=false
+            shift 2
+            ;;
+        -s|--source)
+            SOURCE_DIR="$2"
             shift 2
             ;;
         -a|--all)

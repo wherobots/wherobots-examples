@@ -22,9 +22,33 @@ def escape_mdx_text(text: str) -> str:
     return text
 
 
+def fix_html_void_elements(text: str) -> str:
+    """Convert HTML void elements to self-closing format for MDX/JSX compatibility.
+
+    MDX requires all HTML tags to be properly closed. Void elements like <img>, <br>,
+    <hr>, etc. must use self-closing syntax: <img /> instead of <img>.
+    """
+    # List of HTML void elements that need to be self-closed
+    void_elements = ['img', 'br', 'hr', 'input', 'meta', 'link', 'area', 'base', 'col', 'embed', 'source', 'track', 'wbr']
+
+    for element in void_elements:
+        # Match tags that are not already self-closed
+        # Pattern matches <element ...> but not <element ... /> or <element .../>
+        pattern = rf'<({element})\s*([^>]*?)(?<!/)\s*>'
+        replacement = rf'<\1 \2 />'
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+
+        # Clean up any double spaces introduced
+        text = re.sub(rf'<({element})\s+/>', rf'<\1 />', text, flags=re.IGNORECASE)
+
+    return text
+
+
 def process_markdown_cell(cell: dict) -> str:
     """Process a markdown cell and return MDX-compatible content."""
     source = "".join(cell.get("source", []))
+    # Fix HTML void elements for MDX compatibility
+    source = fix_html_void_elements(source)
     return source + "\n\n"
 
 
@@ -124,19 +148,24 @@ def extract_description(cells: list) -> str:
                 if line.startswith("# ") and not found_title:
                     found_title = True
                     continue
-                # Return first non-empty, non-heading line as description
-                if line and not line.startswith("#"):
-                    # Clean up the line for use as description
-                    desc = line.strip()
-                    # Remove markdown formatting
-                    desc = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", desc)  # Links
-                    desc = re.sub(r"\*\*([^*]+)\*\*", r"\1", desc)  # Bold
-                    desc = re.sub(r"\*([^*]+)\*", r"\1", desc)  # Italic
-                    desc = re.sub(r"`([^`]+)`", r"\1", desc)  # Code
-                    # Truncate if too long
-                    if len(desc) > 160:
-                        desc = desc[:157] + "..."
-                    return desc
+                # Skip empty lines, headings, and HTML tags (like <img>)
+                if not line or line.startswith("#") or line.startswith("<"):
+                    continue
+                # Return first valid text line as description
+                # Clean up the line for use as description
+                desc = line.strip()
+                # Remove markdown formatting
+                desc = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", desc)  # Links
+                desc = re.sub(r"\*\*([^*]+)\*\*", r"\1", desc)  # Bold
+                desc = re.sub(r"\*([^*]+)\*", r"\1", desc)  # Italic
+                desc = re.sub(r"`([^`]+)`", r"\1", desc)  # Code
+                # Skip if only HTML remains after cleaning
+                if desc.startswith("<") or not desc:
+                    continue
+                # Truncate if too long
+                if len(desc) > 160:
+                    desc = desc[:157] + "..."
+                return desc
     return ""
 
 

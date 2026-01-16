@@ -16,11 +16,217 @@ on:
         required: false
         default: 'false'
         type: boolean
+      skip_execution:
+        description: 'Skip notebook execution (use raw notebooks without outputs)'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  NOTEBOOKS_BUCKET: ${{ vars.NOTEBOOKS_BUCKET }}
+  AWS_REGION: us-west-2
 
 jobs:
+  # ============================================================================
+  # Job 1: Execute notebooks in Wherobots Cloud
+  # ============================================================================
+  execute-notebooks:
+    name: Execute Notebooks in Wherobots Cloud
+    runs-on: ubuntu-latest
+    # Skip on PRs (too expensive) or if skip_execution is true
+    if: |
+      github.event_name != 'pull_request' && 
+      github.event.inputs.skip_execution != 'true'
+
+    outputs:
+      status: ${{ steps.poll.outputs.status }}
+      manifest_url: ${{ steps.poll.outputs.manifest_url }}
+      output_prefix: ${{ steps.prefix.outputs.output_prefix }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Create unique run prefix
+        id: prefix
+        run: |
+          RUN_ID="${{ github.run_id }}-${{ github.run_attempt }}"
+          echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
+          echo "input_prefix=notebook-runs/$RUN_ID/input" >> $GITHUB_OUTPUT
+          echo "output_prefix=notebook-runs/$RUN_ID/output" >> $GITHUB_OUTPUT
+
+      - name: Upload notebooks to S3
+        run: |
+          echo "Uploading notebooks to S3..."
+          
+          # Upload all notebooks (excluding Raster_Inference)
+          for nb in $(find . -name "*.ipynb" ! -name "Raster_Inference*" -type f); do
+            # Get relative path (remove leading ./)
+            rel_path="${nb#./}"
+            echo "Uploading: $rel_path"
+            aws s3 cp "$nb" "s3://$NOTEBOOKS_BUCKET/${{ steps.prefix.outputs.input_prefix }}/$rel_path"
+          done
+          
+          # Upload executor script
+          echo ""
+          echo "Uploading executor script..."
+          aws s3 cp .github/workflows/scripts/execute_notebooks.py \
+            "s3://$NOTEBOOKS_BUCKET/scripts/execute_notebooks.py"
+          
+          echo ""
+          echo "Upload complete!"
+
+      - name: Trigger Wherobots Runs API
+        id: trigger
+        run: |
+          echo "Triggering Wherobots Runs API..."
+          
+          RESPONSE=$(curl -s -X POST \
+            "https://api.cloud.wherobots.com/runs?region=aws-us-west-2" \
+            -H "X-API-Key: ${{ secrets.WHEROBOTS_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "runtime": "medium",
+              "name": "notebook-exec-${{ steps.prefix.outputs.run_id }}",
+              "runPython": {
+                "uri": "s3://'"$NOTEBOOKS_BUCKET"'/scripts/execute_notebooks.py",
+                "args": [
+                  "--s3-input-prefix", "s3://'"$NOTEBOOKS_BUCKET"'/${{ steps.prefix.outputs.input_prefix }}/",
+                  "--s3-output-prefix", "s3://'"$NOTEBOOKS_BUCKET"'/${{ steps.prefix.outputs.output_prefix }}/",
+                  "--timeout", "900"
+                ]
+              },
+              "timeoutSeconds": 7200,
+              "environment": {
+                "dependencies": [
+                  {"sourceType": "PYPI", "libraryName": "papermill", "libraryVersion": "2.6.0"}
+                ]
+              }
+            }')
+          
+          echo "Response: $RESPONSE"
+          RUN_ID=$(echo "$RESPONSE" | jq -r '.id')
+          
+          if [ "$RUN_ID" == "null" ] || [ -z "$RUN_ID" ]; then
+            echo "ERROR: Failed to create Wherobots run"
+            echo "$RESPONSE" | jq .
+            exit 1
+          fi
+          
+          echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
+          echo ""
+          echo "Created Wherobots run: $RUN_ID"
+          echo "Monitor at: https://cloud.wherobots.com/job-runs"
+
+      - name: Poll for completion
+        id: poll
+        run: |
+          RUN_ID="${{ steps.trigger.outputs.run_id }}"
+          MAX_WAIT=7200  # 2 hours max
+          WAIT_TIME=0
+          POLL_INTERVAL=30
+          
+          echo "Polling Wherobots run $RUN_ID for completion..."
+          echo ""
+          
+          while [ $WAIT_TIME -lt $MAX_WAIT ]; do
+            RESPONSE=$(curl -s "https://api.cloud.wherobots.com/runs/$RUN_ID" \
+              -H "X-API-Key: ${{ secrets.WHEROBOTS_API_KEY }}")
+            
+            STATUS=$(echo "$RESPONSE" | jq -r '.status')
+            echo "[$(date '+%H:%M:%S')] Status: $STATUS (waited ${WAIT_TIME}s)"
+            
+            case "$STATUS" in
+              "COMPLETED")
+                echo ""
+                echo "Wherobots run completed successfully!"
+                echo "status=COMPLETED" >> $GITHUB_OUTPUT
+                echo "manifest_url=s3://$NOTEBOOKS_BUCKET/${{ steps.prefix.outputs.output_prefix }}/manifest.json" >> $GITHUB_OUTPUT
+                exit 0
+                ;;
+              "FAILED")
+                echo ""
+                echo "ERROR: Wherobots run failed"
+                echo "status=FAILED" >> $GITHUB_OUTPUT
+                
+                # Get logs
+                echo ""
+                echo "Run logs:"
+                curl -s "https://api.cloud.wherobots.com/runs/$RUN_ID/logs?size=100" \
+                  -H "X-API-Key: ${{ secrets.WHEROBOTS_API_KEY }}" | jq -r '.items[].raw' | tail -50
+                
+                exit 1
+                ;;
+              "CANCELLED")
+                echo ""
+                echo "ERROR: Wherobots run was cancelled"
+                echo "status=CANCELLED" >> $GITHUB_OUTPUT
+                exit 1
+                ;;
+              *)
+                # Still running (PENDING, RUNNING)
+                sleep $POLL_INTERVAL
+                WAIT_TIME=$((WAIT_TIME + POLL_INTERVAL))
+                ;;
+            esac
+          done
+          
+          echo ""
+          echo "ERROR: Timeout waiting for run completion after ${MAX_WAIT}s"
+          exit 1
+
+      - name: Download executed notebooks
+        run: |
+          echo "Downloading executed notebooks from S3..."
+          mkdir -p executed_notebooks
+          
+          aws s3 sync "s3://$NOTEBOOKS_BUCKET/${{ steps.prefix.outputs.output_prefix }}/" executed_notebooks/ \
+            --exclude "manifest.json"
+          
+          echo ""
+          echo "Downloaded notebooks:"
+          find executed_notebooks -name "*.ipynb" -type f | sort
+
+      - name: Download and display execution manifest
+        run: |
+          aws s3 cp "s3://$NOTEBOOKS_BUCKET/${{ steps.prefix.outputs.output_prefix }}/manifest.json" \
+            executed_notebooks/manifest.json
+          
+          echo ""
+          echo "Execution summary:"
+          cat executed_notebooks/manifest.json | jq '{
+            total: .total,
+            success: .success,
+            cell_error: .cell_error,
+            failed: .failed,
+            duration: (.end_time + " - " + .start_time)
+          }'
+
+      - name: Upload executed notebooks artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: executed-notebooks
+          path: executed_notebooks/
+          retention-days: 7
+
+  # ============================================================================
+  # Job 2: Convert notebooks to MDX
+  # ============================================================================
   convert-notebooks:
     name: Convert Notebooks to MDX
     runs-on: ubuntu-latest
+    needs: [execute-notebooks]
+    # Run if execute-notebooks succeeded OR was skipped (PRs, skip_execution=true)
+    if: |
+      always() && 
+      (needs.execute-notebooks.result == 'success' || needs.execute-notebooks.result == 'skipped')
     permissions:
       contents: read
       pull-requests: write
@@ -40,12 +246,33 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Download executed notebooks (if available)
+        if: needs.execute-notebooks.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: executed-notebooks
+          path: executed_notebooks
+
+      - name: Determine notebook source
+        id: source
+        run: |
+          if [ -d "executed_notebooks" ] && [ "$(find executed_notebooks -name '*.ipynb' | head -1)" ]; then
+            echo "Using executed notebooks (with outputs)"
+            echo "source_dir=executed_notebooks" >> $GITHUB_OUTPUT
+            echo "has_outputs=true" >> $GITHUB_OUTPUT
+          else
+            echo "Using raw notebooks (without outputs)"
+            echo "source_dir=." >> $GITHUB_OUTPUT
+            echo "has_outputs=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Determine notebooks to convert
         id: get-notebooks
         run: |
-          # Always convert all notebooks to ensure navigation is complete
-          echo "Converting all notebooks..."
-          NOTEBOOKS=$(find . -type f -name "*.ipynb" ! -name "Raster_Inference*" | sort | tr '\n' ' ')
+          SOURCE_DIR="${{ steps.source.outputs.source_dir }}"
+          
+          echo "Scanning for notebooks in: $SOURCE_DIR"
+          NOTEBOOKS=$(find "$SOURCE_DIR" -type f -name "*.ipynb" ! -name "Raster_Inference*" | sort | tr '\n' ' ')
 
           echo "Notebooks to convert: $NOTEBOOKS"
           echo "notebooks=$NOTEBOOKS" >> $GITHUB_OUTPUT
@@ -59,12 +286,16 @@ jobs:
 
       - name: Convert notebooks to MDX
         run: |
+          SOURCE_DIR="${{ steps.source.outputs.source_dir }}"
+          
           for notebook in ${{ steps.get-notebooks.outputs.notebooks }}; do
             if [ -f "$notebook" ]; then
               echo "Converting: $notebook"
 
               # Determine output subdirectory and category
-              dir_name=$(dirname "$notebook" | sed 's|^\./||')
+              # Strip the source dir prefix to get relative path
+              rel_path="${notebook#$SOURCE_DIR/}"
+              dir_name=$(dirname "$rel_path")
               category=$(echo "$dir_name" | cut -d'/' -f1)
               output_subdir="${{ runner.temp }}/mdx_output/${dir_name}"
               mkdir -p "$output_subdir"
@@ -113,9 +344,16 @@ jobs:
               files = [];
             }
 
+            const hasOutputs = '${{ steps.source.outputs.has_outputs }}' === 'true';
+            const outputNote = hasOutputs 
+              ? '**With cell outputs** (notebooks were executed in Wherobots Cloud)'
+              : '**Without cell outputs** (notebook execution is skipped for PRs)';
+
             const body = `## Notebook to MDX Conversion Preview
 
             This PR modifies **${files.length}** notebook(s) that will be converted to MDX and synced to the docs repository.
+
+            ${outputNote}
 
             ### Files to be Updated
             ${files.map(f => {
@@ -125,15 +363,19 @@ jobs:
 
             ### What happens next?
             When this PR is merged to \`main\`:
-            1. All notebooks will be converted to MDX format
-            2. A PR will be automatically created in \`wherobots/docs\`
-            3. The Examples tab navigation will be auto-generated
-            4. Merge the docs PR to publish the changes
+            1. Notebooks will be executed in Wherobots Cloud (to capture outputs)
+            2. All notebooks will be converted to MDX format
+            3. A PR will be automatically created in \`wherobots/docs\`
+            4. The Examples tab navigation will be auto-generated
+            5. Merge the docs PR to publish the changes
 
             ### Local Preview
             \`\`\`bash
-            # Preview all notebooks locally
+            # Preview all notebooks locally (without outputs)
             .github/workflows/scripts/preview_notebooks.sh
+
+            # Preview with outputs (after downloading from S3)
+            .github/workflows/scripts/preview_notebooks.sh --source ./executed_notebooks
             \`\`\`
             `;
 
@@ -164,10 +406,18 @@ jobs:
               });
             }
 
+  # ============================================================================
+  # Job 3: Create PR in docs repository
+  # ============================================================================
   create-docs-pr:
     name: Create Docs PR
-    needs: convert-notebooks
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.convert-notebooks.outputs.has_changes == 'true'
+    needs: [execute-notebooks, convert-notebooks]
+    if: |
+      always() &&
+      github.event_name == 'push' && 
+      github.ref == 'refs/heads/main' && 
+      needs.convert-notebooks.outputs.has_changes == 'true' &&
+      needs.convert-notebooks.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -254,12 +504,13 @@ jobs:
           git commit -m "docs: sync notebook examples from wherobots-examples
 
           Automated sync of Jupyter notebook examples converted to MDX format.
+          Notebooks were executed in Wherobots Cloud to capture cell outputs.
 
           Source: wherobots/wherobots-examples@${SHORT_SHA}
           Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
           Changes include:
-          - Updated MDX files in examples/
+          - Updated MDX files in examples/ (with rendered outputs)
           - Auto-generated navigation for Examples tab"
 
           # Push branch
@@ -273,6 +524,7 @@ jobs:
 
           ### Changes
           - Updated MDX files in `examples/` directory
+          - **Cell outputs are included** (notebooks were executed in Wherobots Cloud)
           - Auto-generated navigation for the **Examples** tab in `docs.json`
 
           ### Source
@@ -283,7 +535,7 @@ jobs:
           ### Review Checklist
           - [ ] Preview the changes using `mint dev`
           - [ ] Verify the Examples tab navigation looks correct
-          - [ ] Check that MDX files render properly
+          - [ ] Check that MDX files render properly with outputs
 
           ---
           *This PR was automatically generated. Merge to publish the changes.*
