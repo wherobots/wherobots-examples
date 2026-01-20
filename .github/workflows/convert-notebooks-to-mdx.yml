@@ -26,6 +26,11 @@ env:
   NOTEBOOKS_BUCKET: ${{ vars.NOTEBOOKS_BUCKET }}
   AWS_REGION: us-west-2
 
+# Default permissions for all jobs (least privilege)
+# Individual jobs override as needed
+permissions:
+  contents: read
+
 jobs:
   # ============================================================================
   # Job 1: Execute notebooks in Wherobots Cloud
@@ -35,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     # Skip on PRs (too expensive) or if skip_execution is true
     if: |
-      github.event_name != 'pull_request' && 
+      github.event_name != 'pull_request' &&
       github.event.inputs.skip_execution != 'true'
 
     outputs:
@@ -65,7 +70,7 @@ jobs:
       - name: Upload notebooks to S3
         run: |
           echo "Uploading notebooks to S3..."
-          
+
           # Upload all notebooks (excluding Raster_Inference)
           for nb in $(find . -name "*.ipynb" ! -name "Raster_Inference*" -type f); do
             # Get relative path (remove leading ./)
@@ -73,13 +78,13 @@ jobs:
             echo "Uploading: $rel_path"
             aws s3 cp "$nb" "s3://$NOTEBOOKS_BUCKET/${{ steps.prefix.outputs.input_prefix }}/$rel_path"
           done
-          
+
           # Upload executor script
           echo ""
           echo "Uploading executor script..."
           aws s3 cp .github/workflows/scripts/execute_notebooks.py \
             "s3://$NOTEBOOKS_BUCKET/scripts/execute_notebooks.py"
-          
+
           echo ""
           echo "Upload complete!"
 
@@ -87,7 +92,7 @@ jobs:
         id: trigger
         run: |
           echo "Triggering Wherobots Runs API..."
-          
+
           RESPONSE=$(curl -s -X POST \
             "https://api.cloud.wherobots.com/runs?region=aws-us-west-2" \
             -H "X-API-Key: ${{ secrets.WHEROBOTS_API_KEY }}" \
@@ -110,16 +115,16 @@ jobs:
                 ]
               }
             }')
-          
+
           echo "Response: $RESPONSE"
           RUN_ID=$(echo "$RESPONSE" | jq -r '.id')
-          
+
           if [ "$RUN_ID" == "null" ] || [ -z "$RUN_ID" ]; then
             echo "ERROR: Failed to create Wherobots run"
             echo "$RESPONSE" | jq .
             exit 1
           fi
-          
+
           echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
           echo ""
           echo "Created Wherobots run: $RUN_ID"
@@ -132,17 +137,17 @@ jobs:
           MAX_WAIT=7200  # 2 hours max
           WAIT_TIME=0
           POLL_INTERVAL=30
-          
+
           echo "Polling Wherobots run $RUN_ID for completion..."
           echo ""
-          
+
           while [ $WAIT_TIME -lt $MAX_WAIT ]; do
             RESPONSE=$(curl -s "https://api.cloud.wherobots.com/runs/$RUN_ID" \
               -H "X-API-Key: ${{ secrets.WHEROBOTS_API_KEY }}")
-            
+
             STATUS=$(echo "$RESPONSE" | jq -r '.status')
             echo "[$(date '+%H:%M:%S')] Status: $STATUS (waited ${WAIT_TIME}s)"
-            
+
             case "$STATUS" in
               "COMPLETED")
                 echo ""
@@ -155,13 +160,13 @@ jobs:
                 echo ""
                 echo "ERROR: Wherobots run failed"
                 echo "status=FAILED" >> $GITHUB_OUTPUT
-                
+
                 # Get logs
                 echo ""
                 echo "Run logs:"
                 curl -s "https://api.cloud.wherobots.com/runs/$RUN_ID/logs?size=100" \
                   -H "X-API-Key: ${{ secrets.WHEROBOTS_API_KEY }}" | jq -r '.items[].raw' | tail -50
-                
+
                 exit 1
                 ;;
               "CANCELLED")
@@ -177,7 +182,7 @@ jobs:
                 ;;
             esac
           done
-          
+
           echo ""
           echo "ERROR: Timeout waiting for run completion after ${MAX_WAIT}s"
           exit 1
@@ -186,10 +191,10 @@ jobs:
         run: |
           echo "Downloading executed notebooks from S3..."
           mkdir -p executed_notebooks
-          
+
           aws s3 sync "s3://$NOTEBOOKS_BUCKET/${{ steps.prefix.outputs.output_prefix }}/" executed_notebooks/ \
             --exclude "manifest.json"
-          
+
           echo ""
           echo "Downloaded notebooks:"
           find executed_notebooks -name "*.ipynb" -type f | sort
@@ -198,7 +203,7 @@ jobs:
         run: |
           aws s3 cp "s3://$NOTEBOOKS_BUCKET/${{ steps.prefix.outputs.output_prefix }}/manifest.json" \
             executed_notebooks/manifest.json
-          
+
           echo ""
           echo "Execution summary:"
           cat executed_notebooks/manifest.json | jq '{
@@ -225,7 +230,7 @@ jobs:
     needs: [execute-notebooks]
     # Run if execute-notebooks succeeded OR was skipped (PRs, skip_execution=true)
     if: |
-      always() && 
+      always() &&
       (needs.execute-notebooks.result == 'success' || needs.execute-notebooks.result == 'skipped')
     permissions:
       contents: read
@@ -270,7 +275,7 @@ jobs:
         id: get-notebooks
         run: |
           SOURCE_DIR="${{ steps.source.outputs.source_dir }}"
-          
+
           echo "Scanning for notebooks in: $SOURCE_DIR"
           NOTEBOOKS=$(find "$SOURCE_DIR" -type f -name "*.ipynb" ! -name "Raster_Inference*" | sort | tr '\n' ' ')
 
@@ -287,7 +292,7 @@ jobs:
       - name: Convert notebooks to MDX
         run: |
           SOURCE_DIR="${{ steps.source.outputs.source_dir }}"
-          
+
           for notebook in ${{ steps.get-notebooks.outputs.notebooks }}; do
             if [ -f "$notebook" ]; then
               echo "Converting: $notebook"
@@ -345,7 +350,7 @@ jobs:
             }
 
             const hasOutputs = '${{ steps.source.outputs.has_outputs }}' === 'true';
-            const outputNote = hasOutputs 
+            const outputNote = hasOutputs
               ? '**With cell outputs** (notebooks were executed in Wherobots Cloud)'
               : '**Without cell outputs** (notebook execution is skipped for PRs)';
 
@@ -386,7 +391,7 @@ jobs:
               issue_number: context.issue.number,
             });
 
-            const botComment = comments.find(c => 
+            const botComment = comments.find(c =>
               c.user.type === 'Bot' && c.body.includes('Notebook to MDX Conversion')
             );
 
@@ -414,8 +419,8 @@ jobs:
     needs: [execute-notebooks, convert-notebooks]
     if: |
       always() &&
-      github.event_name == 'push' && 
-      github.ref == 'refs/heads/main' && 
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
       needs.convert-notebooks.outputs.has_changes == 'true' &&
       needs.convert-notebooks.result == 'success'
     runs-on: ubuntu-latest
