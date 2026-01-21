@@ -31,6 +31,10 @@ from urllib.parse import urlparse
 import boto3
 import papermill as pm
 
+# NOTE: This script assumes it is running within Wherobots Cloud via the Runs API.
+# In Wherobots Cloud, access to Managed Storage (S3) is automatic via IAM roles
+# assigned to the runtime environment. No explicit AWS keys are needed here.
+
 
 def parse_s3_path(s3_path: str) -> tuple:
     """Parse an S3 path into bucket and key.

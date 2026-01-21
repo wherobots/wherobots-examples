@@ -21,9 +21,21 @@ on:
         required: false
         default: 'false'
         type: boolean
+      # Temporary credentials for Managed Storage
+      aws_access_key_id:
+        description: 'AWS Access Key ID (Temp)'
+        required: false
+      aws_secret_access_key:
+        description: 'AWS Secret Access Key (Temp)'
+        required: false
+      aws_session_token:
+        description: 'AWS Session Token (Temp)'
+        required: false
 
 env:
-  NOTEBOOKS_BUCKET: ${{ vars.NOTEBOOKS_BUCKET }}
+  # Managed Storage Settings
+  MANAGED_STORAGE_BUCKET: "wbts-wbc-m97rcg45xi"
+  MANAGED_STORAGE_PREFIX: "dfqlwcrxlk/data/shared/kelly"
   AWS_REGION: us-west-2
 
 # Default permissions for all jobs (least privilege)
@@ -55,8 +67,9 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ github.event.inputs.aws_access_key_id || secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ github.event.inputs.aws_secret_access_key || secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ github.event.inputs.aws_session_token }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Create unique run prefix
@@ -64,26 +77,30 @@ jobs:
         run: |
           RUN_ID="${{ github.run_id }}-${{ github.run_attempt }}"
           echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
-          echo "input_prefix=notebook-runs/$RUN_ID/input" >> $GITHUB_OUTPUT
-          echo "output_prefix=notebook-runs/$RUN_ID/output" >> $GITHUB_OUTPUT
+          # Path structure in Managed Storage
+          echo "input_prefix=${{ env.MANAGED_STORAGE_PREFIX }}/notebook-runs/$RUN_ID/input" >> $GITHUB_OUTPUT
+          echo "output_prefix=${{ env.MANAGED_STORAGE_PREFIX }}/notebook-runs/$RUN_ID/output" >> $GITHUB_OUTPUT
 
       - name: Upload notebooks to S3
         run: |
           echo "Uploading notebooks to S3..."
-
-          # Upload all notebooks (excluding Raster_Inference)
-          for nb in $(find . -name "*.ipynb" ! -name "Raster_Inference*" -type f); do
-            # Get relative path (remove leading ./)
-            rel_path="${nb#./}"
-            echo "Uploading: $rel_path"
-            aws s3 cp "$nb" "s3://$NOTEBOOKS_BUCKET/${{ steps.prefix.outputs.input_prefix }}/$rel_path"
-          done
+          
+          # FOR TESTING: Only upload RasterFlow_FTW.ipynb
+          TARGET_NOTEBOOK="Analyzing_Data/RasterFlow_FTW.ipynb"
+          
+          if [ -f "$TARGET_NOTEBOOK" ]; then
+             echo "Uploading target notebook: $TARGET_NOTEBOOK"
+             aws s3 cp "$TARGET_NOTEBOOK" "s3://${{ env.MANAGED_STORAGE_BUCKET }}/${{ steps.prefix.outputs.input_prefix }}/$TARGET_NOTEBOOK"
+          else
+             echo "ERROR: Target notebook $TARGET_NOTEBOOK not found!"
+             exit 1
+          fi
 
           # Upload executor script
           echo ""
           echo "Uploading executor script..."
           aws s3 cp .github/workflows/scripts/execute_notebooks.py \
-            "s3://$NOTEBOOKS_BUCKET/scripts/execute_notebooks.py"
+            "s3://${{ env.MANAGED_STORAGE_BUCKET }}/${{ env.MANAGED_STORAGE_PREFIX }}/scripts/execute_notebooks.py"
 
           echo ""
           echo "Upload complete!"
@@ -101,10 +118,10 @@ jobs:
               "runtime": "medium",
               "name": "notebook-exec-${{ steps.prefix.outputs.run_id }}",
               "runPython": {
-                "uri": "s3://'"$NOTEBOOKS_BUCKET"'/scripts/execute_notebooks.py",
+                "uri": "s3://${{ env.MANAGED_STORAGE_BUCKET }}/${{ env.MANAGED_STORAGE_PREFIX }}/scripts/execute_notebooks.py",
                 "args": [
-                  "--s3-input-prefix", "s3://'"$NOTEBOOKS_BUCKET"'/${{ steps.prefix.outputs.input_prefix }}/",
-                  "--s3-output-prefix", "s3://'"$NOTEBOOKS_BUCKET"'/${{ steps.prefix.outputs.output_prefix }}/",
+                  "--s3-input-prefix", "s3://${{ env.MANAGED_STORAGE_BUCKET }}/${{ steps.prefix.outputs.input_prefix }}/",
+                  "--s3-output-prefix", "s3://${{ env.MANAGED_STORAGE_BUCKET }}/${{ steps.prefix.outputs.output_prefix }}/",
                   "--timeout", "900"
                 ]
               },
@@ -153,7 +170,7 @@ jobs:
                 echo ""
                 echo "Wherobots run completed successfully!"
                 echo "status=COMPLETED" >> $GITHUB_OUTPUT
-                echo "manifest_url=s3://$NOTEBOOKS_BUCKET/${{ steps.prefix.outputs.output_prefix }}/manifest.json" >> $GITHUB_OUTPUT
+                echo "manifest_url=s3://${{ env.MANAGED_STORAGE_BUCKET }}/${{ steps.prefix.outputs.output_prefix }}/manifest.json" >> $GITHUB_OUTPUT
                 exit 0
                 ;;
               "FAILED")
@@ -192,7 +209,7 @@ jobs:
           echo "Downloading executed notebooks from S3..."
           mkdir -p executed_notebooks
 
-          aws s3 sync "s3://$NOTEBOOKS_BUCKET/${{ steps.prefix.outputs.output_prefix }}/" executed_notebooks/ \
+          aws s3 sync "s3://${{ env.MANAGED_STORAGE_BUCKET }}/${{ steps.prefix.outputs.output_prefix }}/" executed_notebooks/ \
             --exclude "manifest.json"
 
           echo ""
@@ -201,7 +218,7 @@ jobs:
 
       - name: Download and display execution manifest
         run: |
-          aws s3 cp "s3://$NOTEBOOKS_BUCKET/${{ steps.prefix.outputs.output_prefix }}/manifest.json" \
+          aws s3 cp "s3://${{ env.MANAGED_STORAGE_BUCKET }}/${{ steps.prefix.outputs.output_prefix }}/manifest.json" \
             executed_notebooks/manifest.json
 
           echo ""
