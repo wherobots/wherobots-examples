@@ -115,6 +115,10 @@ def process_images(
         alt_text = match.group(1)
         image_path = match.group(2)
 
+        # Skip header-logo images (they're branding, not content)
+        if "header-logo" in image_path:
+            return ""  # Remove the image entirely
+
         # Handle embedded attachments
         if image_path.startswith("attachment:"):
             attachment_name = image_path.replace("attachment:", "")
@@ -209,18 +213,13 @@ def convert_notebook_to_mdx(
 
     # Extract metadata
     title = extract_title_from_markdown(cells)
-    description = extract_description_from_markdown(cells)
 
     # Build MDX content
     mdx_parts = []
 
-    # Add frontmatter
+    # Add frontmatter (title only, no description for now)
     mdx_parts.append("---")
     mdx_parts.append(f'title: "{title}"')
-    if description:
-        # Escape quotes in description
-        safe_desc = description.replace('"', '\\"')
-        mdx_parts.append(f'description: "{safe_desc}"')
     mdx_parts.append("---")
     mdx_parts.append("")
 
