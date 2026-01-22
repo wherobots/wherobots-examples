@@ -1,0 +1,277 @@
+---
+title: "Introducing Wherobots"
+description: "This notebook will get you hands-on with geospatial analysis — combining SQL, Python, and cloud-native data integration to unlock actionable insights from sp..."
+---
+
+![Wherobots logo](../assets/img/header-logo.png)
+
+
+This notebook will get you hands-on with geospatial analysis — combining SQL, Python, and cloud-native data integration to unlock actionable insights from spatial datasets.
+
+## What you will learn
+
+This notebook will teach you to:
+
+- Create a WherobotsDB context
+- Load raster and vector geospatial data from AWS S3 buckets into DataFrames
+- Streamline geospatial workflows using temporary views
+- Filter, query, and manipulate geospatial data using Spatial SQL
+- Calculate zonal statistics — like mean temperature over spatial geometries — using `RS_ZonalStats`
+- Visualize data and explore insights using SedonaKepler
+
+![3D map of buildings in New York City](./assets/img/part1_preview.jpg)
+
+# Set up your Sedona context
+
+A `SedonaContext` connects your code to the Wherobots Cloud compute environment where your queries can run fast and efficiently.
+
+First, you set up the `config` for your compute environment, then use that configuration to launch the `sedona` context. We’ll use the default configuration in this notebook, but you can learn about configuring the context in our [documentation](https://docs.wherobots.com/latest/develop/notebook-management/notebook-instance-management/). 
+
+```python
+from sedona.spark import *
+
+config = SedonaContext.builder().getOrCreate()
+sedona = SedonaContext.create(config)
+```
+
+# Using vector data
+
+Wherobots is a cloud-native tool and works best with data in cloud storage. In this notebook, we will an example dataset, but when you want to work with your own data, you have two options:
+
+- Load your data into Wherobots Cloud managed storage, our managed solution
+- Connect to AWS S3 buckets and integrate with existing data workflows
+
+For now, let’s get started with sample vector data about buildings in New York City. 
+
+> **Vector data** is spatial data that includes geometry like points, lines, and shapes.
+
+We will use the following code snippet to load a GeoParquet file from S3 into a Sedona DataFrame.
+
+> **GeoParquet** is an open, efficient format for storing geospatial data, perfect for large-scale geospatial workflows. ([Docs: Loading GeoParquet](https://docs.wherobots.com/latest/tutorials/wherobotsdb/vector-data/vector-load/#load-geoparquet))
+
+```python
+# URI of sample data in an S3 bucket
+geoparquet_uri = 's3://wherobots-examples/data/onboarding_1/nyc_buildings.parquet'
+
+# Load from S3 into a Sedona DataFrame
+buildings = sedona.read.format("geoparquet").load(geoparquet_uri)
+
+buildings.printSchema()
+```
+
+# Using raster data
+
+Wherobots lets you write queries that combine vector and raster data.
+
+> **Raster data** is spatial data that has one or more values stored in a grid. Satellite photography is one kind of raster data, where each grid location has a red, green, and blue value that are combined to create the color of the corresponding pixel. Two common raster formats are GeoTIFF and COG (Cloud Optimized GeoTIFF).
+
+We will load a GeoTIFF raster file of the area near Central Park in New York City. This TIFF is not an image file, but a Digital Elevation Model (DEM), where each value in the grid represents the elevation of that point. This file uses a one-foot resolution, so each value represents the elevation of 1 square foot (0.093 sqare meters) of the park. ([Docs: Raster Loaders](https://docs.wherobots.com/latest/references/wherobotsdb/raster-data/Raster-loader/))
+
+```python
+# URI of sample raster elevation data
+central_park_uri = 's3://wherobots-examples/data/onboarding_1/CentralPark.tif'
+
+# Load the raster into a Sedona DataFrame
+elevation = sedona.read\
+                  .format("raster")\
+                  .option("tileWidth", "256")\
+                  .option("tileHeight", "256")\
+                  .load(central_park_uri)
+
+elevation.printSchema()
+elevation.count()
+```
+
+The schema shows the raster has been loaded as a table wtih 4 columns:
+
+- `rast` contains a tile that is one part of the overall raster
+- `x` and `y` are the coordinates of the tile within the raster
+- `name` is the original file name (CentralPark.tif) for all rows
+
+The count shows us there are 1,872 tiles or rows in the table. Each of those tiles in turn has 256×256 = 65,536 elevation values.
+
+If we had wanted to load the raster data using Spatial SQL instead of Python, we could have used syntax like this: 
+
+```python
+elevation = sedona.sql(f'''SELECT RS_FromPath('\{raster_path\}') as rast''')
+```
+
+> Spatial SQL prefixes many function calls with either `RS_` (for "raster") or, as you'll see below, `ST_` (for "spatial-temporal").
+
+# Writing SQL using temporary views 
+
+The line of code below calls `createOrReplaceTempView()` to register our DataFrame as a temporary SQL view in Apache Spark. Temporary views allow you to interact with the DataFrame using SQL queries. For example, after creating the temporary view, you can run the following query to analyze the elevation data:
+
+```python
+result = spark.sql("SELECT * FROM elevation WHERE height > 1000")
+```
+
+Temporary views only exist for the duration of the Spark session. Once the session ends, the view will no longer be available.
+
+```python
+elevation.createOrReplaceTempView('elevation')
+```
+
+# Querying with vector and raster data together
+
+A simple way to combine vector and raster data is to look up a raster value at a specific point. For example, if we wanted to get the elevation of [Strawberry Fields](https://en.wikipedia.org/wiki/Strawberry_Fields_(memorial)) in Central Park, we can write that in Spatial SQL.
+
+```python
+# Query for the elevation at Strawberry Fields in Central Park
+
+strawberry_fields = sedona.sql('''
+SELECT RS_Value(rast, ST_Point(-73.9751781, 40.7756813)) AS elevation_in_feet
+FROM   elevation
+WHERE  RS_Intersects(rast, ST_Point(-73.9751781, 40.7756813))
+''')
+
+strawberry_fields.show()
+```
+
+Here's how that query works:
+
+- `RS_Value(rast, ST_Point(...))` retrieves the value (in this case, elevation) from the raster value at the specified point (the longitude and latitude of Strawberry Fields).
+- `AS elevation_in_feet` names the output column.
+- `FROM elevation` uses the temporary view we created.
+- `WHERE RS_Intersects` keeps only the raster tile that includes our point of interest.
+
+Without the `WHERE` clause, this query would return 1,872 rows, one for each tile in the raster. One row would have a numeric value for `elevation_in_feet` and the other 1,871 values would be `NULL` because their `rast` tile does not contain the point in question.
+
+# Visualizing data on a map using SedonaKepler
+
+Kepler.gl is an open source map visualization tool that integrated into Wherobots as `SedonaKepler`. Here, we will use Kepler to show the `buildings` vector data we loaded previously. You can customize your map with Kepler.gl configuration settings that might start something like this:
+
+```json
+    "mapStyle": "dark-matter",
+    "layers": [
+        \{
+            "type": "polygon", 
+            "name": "NYC Buildings", 
+            "colorBy": "category", 
+            "colorColumn": "PRIM_ID", 
+            "heightColumn": "height_val", 
+            "heightScale": 1
+        \}
+    ]
+    ...
+```
+
+Instead of enumerating all the configuration here in this notebook, we built a `config.json` file that we will load into a dictionary called `map_config`, and then pass that dictionary as a parameter.
+
+```python
+import json
+from sedona.spark import *
+
+# Load our map configuration into a dictionary so it can be read by SedonaKepler
+with open('assets/conf/config.json') as f:
+    map_config = json.load(f)
+
+# Create the map with our configuration and the buildings DataFrame, then render the map
+map = SedonaKepler.create_map(config=map_config)
+SedonaKepler.add_df(map, buildings, 'NYC Buildings')
+map
+```
+
+# Analyzing building elevations across Central Park
+
+Combining all the concepts we've covered so far, we will now calculate a zonal statistic, the average elevation for the buildings inside Central Park.
+
+> A **zonal statistic** is an aggregate of values (like a sum, average, count, or maximum) across a geographic region.
+
+First, we will get set up for the query.
+
+```python
+# Temporary view to enable SQL queries
+buildings.createOrReplaceTempView('buildings')
+
+# Check the Spatial Reference ID (SRID) of the rasters
+sedona.sql('SELECT RS_SRID(rast) FROM elevation LIMIT 1').show()
+```
+
+The Spatial Reference ID (SRID) of the elevation raster data is `2263`. This number is an entry in the EPSG catalog that refers to the NAD83 / New York Long Island coordinate reference system. However, our `buildings` vector data uses `epsg:4326`, the WGS84 Geographic Coordinate System, which uses latitude and longitude in decimal degrees. In order for us to do our query that joins across these two data sets, we will use `ST_Transform` to map `buildings` from the latter to the former.
+
+Let's get to the actual analysis.
+
+```python
+buildings_elevation = sedona.sql(f'''WITH a AS (
+SELECT
+    buildings.PROP_ADDR AS name,
+    buildings.geom,
+    avg(RS_ZonalStats(elevation.rast, ST_Transform(buildings.geom, 'epsg:4326', 'epsg:2263'), 1, 'mean', true)) AS elevation
+FROM
+    buildings
+JOIN
+    elevation
+ON
+    RS_Intersects(elevation.rast, ST_Transform(buildings.geom, 'epsg:4326', 'epsg:2263'))
+GROUP BY
+    buildings.PROP_ADDR, buildings.geom)
+
+SELECT * FROM a WHERE elevation > 0
+''')
+
+buildings_elevation.show()
+```
+
+Let's break down how that query works.
+
+**Inputs:**
+
+- `elevation` is raster data loaded from our Digital Elevation Model (DEM) GeoTIFF.
+- `buildings` is vector data of all the buildings in New York City, including their geometry (`geom`) and addresses (`PROP_ADDR`).
+
+**Coordinate transformation:** The building geometries are transformed from epsg:4326 to epsg:2263.
+
+**Zonal stats calculation:** `RS_ZonalStats` computes the mean elevation for each building's geometry based on the DEM:
+  - **Raster input**: `elevation.rast` Elevation raster values
+  - **Vector geometry**: The shapes of the buildings
+  - **Band**: `1` tells Wherobots to use the first band (value) of the raster (in this case, the elevation).
+  - **Statistic**: `mean` calculates the average within the vector geometry.
+  - **Ignore NoData**: `true` ensures invalid or missing data in the raster is excluded.
+
+**Spatial join:** `RS_Intersects` ensures only raster values that intersect the buildings' geometry are used.
+
+**Filtering results:** Remove buildings with non-positive elevation values using `WHERE elevation > 0`.
+
+**Aggregation:** Elevations are grouped by building address (`PROP_ADDR`) and geometry to compute the average elevation for each building.
+
+**Output:** The resulting DataFrame, `buildings_elevation`, contains:
+- `name`: property address of the building
+- `geom`: building geometry
+- `elevation`: average elevation of the building footprint (in feet)
+
+```python
+# Display a map of the query results
+
+with open('assets/conf/central_park_config.json') as f:
+    # Load the JSON data into a dictionary
+    park_config = json.load(f)
+
+map = SedonaKepler.create_map(config=park_config)
+SedonaKepler.add_df(map, buildings_elevation, 'NYC Buildings')
+
+map
+```
+
+# Next steps
+
+Congratulations on completing this notebook! You’ve learned how to:
+- Combine raster and vector data to derive meaningful insights about urban infrastructure. For example, it can be used for:
+  - Identifying buildings at risk of flooding based on elevation.
+  - Urban planning and construction in areas with varying terrain.
+  - Environmental impact studies within Central Park and surrounding areas.
+- Perform zonal statistics to derive meaningful insights from elevation and temperature datasets.
+- Use Apache Sedona SQL to manipulate and query spatial data efficiently.
+
+Here are some places you can go next with Wherobots:
+
+### 🛠️ Experiment with Different Data Sources
+- Use additional raster datasets, such as vegetation indices or precipitation maps, to enhance your analysis.
+- Incorporate demographic or socioeconomic vector datasets to explore spatial relationships.
+- Try quantifying health of crops and forests using [NDVI analysis](https://docs.wherobots.com/latest/references/wherobotsdb/raster-data/Raster-map-algebra/#ndvi)
+- Use [Overture Maps data](https://docs.wherobots.com/latest/tutorials/opendata/introduction/#open-data-catalogs) hosted and managed by Wherobots
+
+### 🔍 Try Advanced Apache Sedona Features
+- Explore Sedona’s spatial join capabilities to analyze relationships between multiple vector datasets.
+- Use Sedona’s advanced functions, like `ST_Buffer` or `ST_Within`, for proximity and containment analysis.
+- Check out our full function reference for [Apache Sedona here](https://docs.wherobots.com/latest/references/wherobotsdb/vector-data/Overview/).

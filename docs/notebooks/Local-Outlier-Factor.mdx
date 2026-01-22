@@ -1,0 +1,75 @@
+---
+title: "Local Outlier Factor"
+description: "Local Outlier Factor (LOF) is a common algorithm for identifying data points that are inliers/outliers relative to their neighbors. The algorithm works by co..."
+---
+
+
+Local Outlier Factor (LOF) is a common algorithm for identifying data points that are inliers/outliers relative to their neighbors. The algorithm works by comparing how close an element is to its neighbors vs how close they are to their neighbors. The number of neighbors to use, k, is set by the user.
+Scores much less than one are inliers, scores much greater are outliers, and those near one are neither.
+This demo is derived from the [scikit-learn Local Outlier Detection demo](https://scikit-learn.org/stable/auto_examples/neighbors/plot_lof_outlier_detection.html).
+
+# Define Sedona Context
+
+```python
+from sedona.spark import *
+
+config = SedonaContext.builder().getOrCreate()
+sedona = SedonaContext.create(config)
+```
+
+# Data Generation
+We generate some data. Most of it is random, but some data is explicitly designed to be outliers
+
+```python
+import numpy as np
+import pyspark.sql.functions as f
+
+from sedona.spark import *
+
+np.random.seed(42)
+
+X_inliers = 0.3 * np.random.randn(100, 2)
+X_inliers = np.r_[X_inliers + 2, X_inliers - 2]
+X_outliers = np.random.uniform(low=-4, high=4, size=(20, 2))
+X = np.r_[X_inliers, X_outliers]
+
+```
+
+## Generation LOF
+We use the LOF implementation in Wherobots to generate this statistic on the data. We set k to 20.
+
+
+```python
+df = sedona.createDataFrame(X).select(ST_MakePoint(f.col("_1"), f.col("_2")).alias("geometry"))
+outliers_df = local_outlier_factor(df, 20)
+
+```
+
+```python
+outliers_df.show()
+```
+
+## Visualization
+We visualize the results using geopandas. Some manipulations are made to the data to improve the clarity of the visualization.
+
+```python
+import geopandas as gpd
+
+pdf = (outliers_df
+       .withColumn("lof", f.col("lof") * 50)
+       .toPandas()
+      )
+gdf = gpd.GeoDataFrame(pdf, geometry="geometry")
+
+ax = gdf.plot(
+    figsize=(10, 8),
+    markersize=gdf['lof'],
+    edgecolor='r',
+    facecolors="none",
+)
+
+gdf.plot(ax=ax, figsize=(10, 8), color="k", markersize=1, legend=True)
+
+ax.set_title('LOF Scores')
+ax.legend(['Outlier Scores', 'Data points'])
+```

@@ -1,0 +1,242 @@
+---
+title: "STAC Reader and API"
+description: "In this notebook, we will demonstrate how to load SpatioTemporal Asset Catalog (STAC) collections in WherobotsDB. We will cover the following steps:"
+---
+
+
+In this notebook, we will demonstrate how to load SpatioTemporal Asset Catalog (STAC) collections in WherobotsDB. We will cover the following steps:  
+
+- Connecting to a STAC API: Learn how to establish a connection to a STAC API endpoint.
+- Searching items and load them into WherobotsDB: See how to load STAC collections into WherobotsDB for further analysis.
+- Applying Spatial and Temporal Filters: Learn to filter the data based on spatial and temporal criteria to focus on specific areas and time periods.
+- Saving Data: Discover how to save the filtered data into various formats for further use.
+
+By the end of this notebook, you will be able to efficiently manage and analyze geospatial data using STAC collections in WherobotsDB.
+
+
+The STAC data source enables seamless integration with [STAC](https://stacspec.org/) APIs, allowing users to efficiently read and interact with geospatial data. This data source supports reading both STAC items and collections, making it a versatile tool for various geospatial data processing tasks.  To utilize the STAC data source, you can load a STAC catalog into a Sedona DataFrame using the stac format. The path can be either a local STAC collection JSON file or an HTTP/HTTPS endpoint to retrieve the collection JSON file. This flexibility allows for easy access to both locally stored and remotely hosted STAC data.  
+
+### Technical details
+- STAC API Integration: Connect to any STAC-compliant API to fetch and process geospatial data.
+- DataFrame support: Load STAC data directly into a Sedona DataFrame for further analysis and processing using Spark.
+- Flexible input paths: Accepts both local file paths and remote URLs, providing versatility in data sourcing.
+
+### Potential use cases
+- Geospatial data analysis: Perform complex spatial queries and analyses on large geospatial datasets.
+- Environmental monitoring: Access and analyze satellite imagery and other remote sensing data for environmental studies.
+- Urban planning: Utilize geospatial data to support urban development and infrastructure planning.
+- Disaster response: Quickly access and process geospatial data to aid in disaster response and recovery efforts.
+
+### Find STAC service endpoints
+
+- [STAC Browser](https://radiantearth.github.io/stac-browser/#/?.language=en)
+- [AWS Earth Search](https://earth-search.aws.element84.com/v1/collections/sentinel-2-pre-c1-l2a)
+- [EarthHub](https://earthdatahub.destine.eu/api/stac/v1/collections/copernicus-dem)
+- [Google APIS](https://storage.googleapis.com/cfo-public/vegetation/collection.json)
+- [Microsoft Planetary Computer](https://planetarycomputer.microsoft.com/api/stac/v1/collections/naip)
+
+By leveraging the STAC data source, users can efficiently manage and analyze vast amounts of geospatial data, unlocking new insights and applications across various domains.
+
+```python
+from sedona.spark import *
+
+config = SedonaContext.builder().getOrCreate()
+sedona = SedonaContext.create(config)
+
+```
+
+### Load a STAC collection from an HTTP/HTTPS endpoint:
+
+This code below uses Apache Sedona and PySpark to load STAC data from the Sentinel-2 collection via a specified URL. It then explodes the “assets” map into key-value pairs, extracting the “href” and “rast” fields from the “value” struct. The resulting DataFrame is ordered by the “datetime” field in descending order. Finally, it counts the number of rows in the processed DataFrame to verify the output.
+
+Note: if you need to load the image using the out-db reader from S3, you need to setup the correct S3 credential provider in Sedona config if the provider of the data requries non-anonymous access. See the docs on our [Storage Integration](https://docs.wherobots.com/latest/develop/storage-management/s3-storage-integration/).
+
+
+```python
+from pyspark.sql.functions import col, explode, map_values
+
+# Load from STAC datasource
+df = sedona.read.format("stac") \
+    .option("itemsLimitMax", "1000") \
+    .option("itemsLimitPerRequest", "200") \
+    .load("https://earth-search.aws.element84.com/v1/collections/sentinel-2-c1-l2a")
+
+# Print the raw STAC dataframe schema
+df.printSchema() 
+
+```
+
+### Check the number of rows loaded by the STAC reader and explode it to araster dataframe
+
+```python
+%%time
+
+# Cache the dataframe if needed
+df.cache()
+
+# Print the raw item dataframe row count
+print(df.count())
+
+```
+
+```python
+# Explode the map into key-value pairs
+df_exploded = df.select("id", "datetime", explode("assets").alias("key", "value"))
+
+# Select the 'rast' field from the 'value' struct
+df_rast = df_exploded.select(
+    col("id"), 
+    col("datetime"), 
+    col("key"), 
+    col("value.href").alias("href"), 
+    col("value.type").alias("type"),
+    col("value.rast").alias("rast")
+)
+
+# Show the loaded raster DataFrame
+df_rast.show()
+```
+
+### Integrate with OutDB Raster
+
+This code filters the `df_rast` DataFrame to select rows where the href column ends with .tif, limits the results to 4 rows, and converts the rast field into an image using the RS_AsImage function. The resulting DataFrame, which contains the generated images, is then displayed using `SedonaUtils.display_image`.
+
+
+```python
+from pyspark.sql.functions import col
+
+# Limit to show 4 items
+dfImage = df_rast.filter(col("rast").isNotNull()) \
+    .limit(4) \
+    .selectExpr("RS_AsImage(rast, 300) as raster_image1")
+
+# Display the image
+SedonaUtils.display_image(dfImage)
+
+```
+
+### Run Spark SQLs on the STAC dataframe
+
+```python
+# Register the dataframe into a view
+df.createOrReplaceTempView("STAC_SAMPLE_VIEW")
+
+# Run Spark SQL on the STAC table loaded
+sedona.sql("""
+SELECT ID, TITLE, DATETIME,
+       ST_AREA(ST_ENVELOPE(GEOMETRY)) AS BBOX_AREA,
+       SIZE(LINKS) as LINKS_CNT, 
+       SIZE(ASSETS) as ASSETS_CNT
+FROM STAC_SAMPLE_VIEW
+""").show(20, False)
+
+```
+
+## Python STAC API
+
+The STAC data source can also be loaded and searched using a new Python API. It will follow PySTAC client behavior. 
+
+This Python code initializes a STAC client by importing the Client class from the sedona.stac.client module and the DataFrame class from pyspark.sql. It then opens the client to connect to the Earth Search API using the specified URL (https://earth-search.aws.element84.com/v1).
+
+
+```python
+from sedona.spark import *
+from pyspark.sql import DataFrame
+
+# Initialize the client
+client = Client.open("https://earth-search.aws.element84.com/v1")
+
+```
+
+This Python code uses the client.search() method to query the “sentinel-2-c1-l2a” collection from the STAC API, filtering results for items from the year 2025. It sets the return_dataframe parameter to False, meaning the search results will not be returned as a DataFrame. Finally, it prints the retrieved items.
+
+```python
+%%time
+
+# Search items on a collection within a year
+items = client.search(
+    collection_id="sentinel-2-c1-l2a",
+    datetime="2025",
+    max_items=100,
+    return_dataframe=False
+)
+
+# Print the count of items
+items_list = list(items)
+print(f"Loaded items: {len(items_list)}")
+
+```
+
+```python
+%%time
+
+# Search items with bounding box and interval
+items = client.search(
+    collection_id="sentinel-2-c1-l2a",
+    bbox=[-180.0, -90.0, 180.0, 90.0],
+    datetime="2025",
+    max_items=200,
+    return_dataframe=False
+)
+
+# Print the count of items
+items_list = list(items)
+print(f"Loaded items: {len(items_list)}")
+
+```
+
+```python
+%%time
+
+# Search multiple items with multiple bounding boxes
+bbox_list = [
+    [-180.0, -90.0, 180.0, 90.0],
+    [-100.0, -50.0, 100.0, 50.0]
+]
+item_df = client.search(
+    collection_id="sentinel-2-c1-l2a",
+    bbox=bbox_list,
+    max_items=200,
+    return_dataframe=True
+)
+
+# Show the datafram
+item_df.show()
+
+```
+
+## Save to STAC GeoParquet format
+
+We also implement a stac df to stac geoparquet converter that can be used to write geoparquet without requiring 
+users to explicitly cast the schema or explode the dataframe. This could potentially be implemented in 
+stac_geopaquet writer using a stac df loaded if feasible.
+
+This code connects to the Microsoft Planetary Computer’s STAC API to fetch the “aster-l1t” collection. It defines spatial (bounding box) and temporal (datetime interval) extents for the data to be saved. The script checks if a specified output path (/tmp/stac_temp_aster-l1t) exists, deletes it if it does, and then saves the filtered items to GeoParquet. Afterward, it reads the saved GeoParquet data into a Spark DataFrame and displays the contents. Finally, it cleans up by deleting the output path again.
+
+```python
+# Collection to be loaded
+collection = client.get_collection("sentinel-2-c1-l2a")
+
+# Define spatial and temporal extents
+bbox = [[-114.0, -31.0, -108.0, 37.0]]
+datetime = [["2025-01-01T00:00:00Z", "2025-02-01T00:00:00Z"]]
+
+import os
+import shutil
+
+out_path = "/tmp/stac_temp_sentinel-2-c1-l2a"
+
+# Delete the out_path if it exists
+if os.path.exists(out_path):
+    shutil.rmtree(out_path)
+
+# Save items to GeoParquet
+collection.save_to_geoparquet(
+    output_path=out_path, bbox=bbox, datetime=datetime
+)
+
+# Delete the out_path if it exists
+if os.path.exists(out_path):
+    shutil.rmtree(out_path)
+
+```

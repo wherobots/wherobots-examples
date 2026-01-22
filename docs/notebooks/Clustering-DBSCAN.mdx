@@ -1,0 +1,87 @@
+---
+title: "DBSCAN"
+description: "DBSCAN is a popular algorithm for finding clusters of spatial data. It identifies core points that have enough (defined by the user) neighbors within some di..."
+---
+
+DBSCAN is a popular algorithm for finding clusters of spatial data. It identifies core points that have enough (defined by the user) neighbors within some distance (also user defined). Points that are not core points but are within the distance of a core point are considered border points of the cluster. Points that are not core points and are not within the distance of a core point are considered outliers and not part of any cluster.
+
+The algorithm requires two parameters:
+* `epsilon` - The farthest apart two points can be while still being considered connected or related. `epsilon` must be a positive double float.
+* `minPoints` - The minimum number of neighbor points (as determined by epsilon). A point needs `minPoints` neighbors to be considered a core point. `minPoints` must be a positive integer.
+
+## Example overview
+In this example, we will generate some random data and use DBSCAN to cluster that data. Then, we'll visualize the clusters using a scatter plot.
+
+This demo is derived from the [scikit-learn DBSCAN demo](https://scikit-learn.org/stable/auto_examples/cluster/plot_dbscan.html).
+
+```python
+%pip install scikit-learn
+```
+
+# Define Sedona Context
+
+```python
+from sedona.spark import *
+
+config = SedonaContext.builder().getOrCreate()
+sedona = SedonaContext.create(config)
+```
+
+## Data Generation
+In the following code section, we'll generate some data using sklearn's `make_blobs` function. We've set the data to consist of 750 points with 3 clusters. After clustering the data, we'll  visualize it in `pyplot`.
+
+```python
+from sklearn.datasets import make_blobs
+from sklearn.preprocessing import StandardScaler
+import matplotlib.pyplot as plt
+
+center_clusters = [[1, 1], [-1, -1], [1, -1]]
+feature_matrix, labels_true = make_blobs(
+   n_samples=750, centers=center_clusters, cluster_std=0.4, random_state=0
+)
+
+feature_matrix = StandardScaler().fit_transform(feature_matrix)
+
+plt.scatter(feature_matrix[:, 0], feature_matrix[:, 1])
+plt.show()
+```
+
+## Clustering
+In the following section, we'll use the DBSCAN implementation in Wherobots to cluster the data in a dataframe, setting `epsilon` to `0.3` and `minPoints` to `10`.
+
+Wherobots' DBSCAN returns outliers by default.
+
+```python
+import pyspark.sql.functions as f
+from sedona.spark import *
+
+df = sedona.createDataFrame(feature_matrix).select(ST_MakePoint("_1", "_2").alias("geometry"))
+clusters_df = dbscan(df, 0.3, 10, include_outliers=True)
+
+```
+
+```python
+clusters_df.show()
+```
+
+## Visualization
+Finally, we'll visualize the clusters using geopandas. Some manipulations are made to the data to improve the clarity of the visualization.
+
+```python
+import geopandas as gpd
+import pyspark.sql.types as t
+
+pdf = (clusters_df
+       .withColumn("isCore", (f.col("isCore").cast(t.IntegerType()) + 1) * 40)
+       .withColumn("cluster", f.hash("cluster").cast(t.StringType()))
+       .toPandas()
+      )
+gdf = gpd.GeoDataFrame(pdf, geometry="geometry")
+
+gdf.plot(
+    figsize=(10, 8),
+    column="cluster",
+    markersize=gdf['isCore'],
+    edgecolor='lightgray',
+)
+```

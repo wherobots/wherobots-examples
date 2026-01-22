@@ -1,0 +1,139 @@
+---
+title: "k-Nearest Neighbor joins"
+description: "In this notebook we will demostrate how to perform k-Nearest Neighbors (kNN) joins in WherobotsDB."
+---
+
+
+In this notebook we will demostrate how to perform k-Nearest Neighbors (kNN) joins in WherobotsDB.
+A geospatial k-Nearest Neighbors (kNN) join is a specialized form of the kNN join that specifically deals with geospatial data. This method involves identifying the k-nearest neighbors for a given spatial point or region based on geographic proximity, typically using spatial coordinates and a suitable distance metric like Euclidean or great-circle distance.
+
+There are two types of kNN joins supported in WherobotsDB:
+
+- **Approximate kNN Join**: The approximate k-Nearest Neighbor (kNN) algorithm utilizes an approximation method to map and distribute multidimensional data into a single dimension while maintaining some degree of locality. This approach allows for the efficient generation of approximate k-Nearest Neighbors for each geometry in the query dataset. 
+- **Exact kNN Join**: The exact k-Nearest Neighbor (kNN) algorithm begins by partitioning the dataset to maintain spatial locality. It then constructs an efficient structure over another dataset to quickly find accurate kNN matches. By combining local results, the algorithm delivers the complete kNN join for both datasets.
+
+For a more in-depth explanation, including additional examples, API details, and usage guidelines, please refer to the documentation [here](https://docs.wherobots.com/latest/references/wherobotsdb/vector-data/NearestNeighbourSearching/) or check out our detailed tech blog [here](https://wherobots.com/introducing-knn-join-for-wherobots-and-apache-sedona/).
+
+## Initial Configuration
+
+
+```python
+from sedona.spark import *
+
+config = SedonaContext.builder().getOrCreate()
+sedona = SedonaContext.create(config)
+
+```
+
+# Use Case Example
+
+In this use case, the k-Nearest Neighbor (kNN) join is applied to match places with nearby flights. The Queries table contains the locations of Overture Maps [places](https://docs.overturemaps.org/guides/places/), such as schools, businesses, hospitals, religious organizations, landmarks, and mountain peak, while the Objects table holds the locations of flights. The goal is to find which flights are closest to each place, which can be crucial for making real-time decisions in air traffic management and ensuring flight safety.
+
+# State Boundary
+
+### Pick a state or other boundary
+    
+[Click here for boundaries of other states](https://gist.github.com/JoshuaCarroll/49630cbeeb254a49986e939a26672e9c)
+
+
+```python
+# California boundary
+# spatial_filter = "POLYGON((-124.4009 41.9983,-123.6237 42.0024,-123.1526 42.0126,-122.0073 42.0075,-121.2369 41.9962,-119.9982 41.9983,-120.0037 39.0021,-117.9575 37.5555,-116.3699 36.3594,-114.6368 35.0075,-114.6382 34.9659,-114.6286 34.9107,-114.6382 34.8758,-114.5970 34.8454,-114.5682 34.7890,-114.4968 34.7269,-114.4501 34.6648,-114.4597 34.6581,-114.4322 34.5869,-114.3787 34.5235,-114.3869 34.4601,-114.3361 34.4500,-114.3031 34.4375,-114.2674 34.4024,-114.1864 34.3559,-114.1383 34.3049,-114.1315 34.2561,-114.1651 34.2595,-114.2249 34.2044,-114.2221 34.1914,-114.2908 34.1720,-114.3237 34.1368,-114.3622 34.1186,-114.4089 34.1118,-114.4363 34.0856,-114.4336 34.0276,-114.4652 34.0117,-114.5119 33.9582,-114.5366 33.9308,-114.5091 33.9058,-114.5256 33.8613,-114.5215 33.8248,-114.5050 33.7597,-114.4940 33.7083,-114.5284 33.6832,-114.5242 33.6363,-114.5393 33.5895,-114.5242 33.5528,-114.5586 33.5311,-114.5778 33.5070,-114.6245 33.4418,-114.6506 33.4142,-114.7055 33.4039,-114.6973 33.3546,-114.7302 33.3041,-114.7206 33.2858,-114.6808 33.2754,-114.6698 33.2582,-114.6904 33.2467,-114.6794 33.1720,-114.7083 33.0904,-114.6918 33.0858,-114.6629 33.0328,-114.6451 33.0501,-114.6286 33.0305,-114.5888 33.0282,-114.5750 33.0351,-114.5174 33.0328,-114.4913 32.9718,-114.4775 32.9764,-114.4844 32.9372,-114.4679 32.8427,-114.5091 32.8161,-114.5311 32.7850,-114.5284 32.7573,-114.5641 32.7503,-114.6162 32.7353,-114.6986 32.7480,-114.7220 32.7191,-115.1944 32.6868,-117.3395 32.5121,-117.4823 32.7838,-117.5977 33.0501,-117.6814 33.2341,-118.0591 33.4578,-118.6290 33.5403,-118.7073 33.7928,-119.3706 33.9582,-120.0050 34.1925,-120.7164 34.2561,-120.9128 34.5360,-120.8427 34.9749,-121.1325 35.2131,-121.3220 35.5255,-121.8013 35.9691,-122.1446 36.2808,-122.1721 36.7268,-122.6871 37.2227,-122.8903 37.7783,-123.2378 37.8965,-123.3202 38.3449,-123.8338 38.7423,-123.9793 38.9946,-124.0329 39.3088,-124.0823 39.7642,-124.5314 40.1663,-124.6509 40.4658,-124.3144 41.0110,-124.3419 41.2386,-124.4545 41.7170,-124.4009 41.9983,-124.4009 41.9983))"
+
+# Wyoming state boundary
+spatial_filter = "POLYGON((-104.0556 41.0037,-104.0584 44.9949,-111.0539 44.9998,-111.0457 40.9986,-104.0556 41.0006,-104.0556 41.0037))"
+
+```
+
+### Queries Table: Places
+
+This table contains the objects for which you want to find the nearest neighbors.
+
+```python
+from pyspark.sql.functions import col
+from pyspark.sql.functions import monotonically_increasing_id, col
+
+# load data
+df_queries = sedona.table("wherobots_open_data.overture_maps_foundation.places_place")
+df_queries = df_queries.withColumn("id", monotonically_increasing_id())
+df_queries = df_queries.filter(f"ST_Contains(ST_GeomFromWKT('{spatial_filter}'), geometry) = true")
+
+df_queries = df_queries.repartition(100)
+
+df_queries.cache()
+
+df_queries.createOrReplaceTempView("queries")
+
+print(df_queries.rdd.getNumPartitions())
+print(df_queries.count())
+
+```
+
+### Objects Table: Flights
+
+This table contains the objects that are potential neighbors to the objects in the Queries table.
+
+
+```python
+# Load objects table
+df_objects = sedona.read.format("geoparquet").load("s3a://wherobots-examples/data/examples/flights/2024_s2.parquet")
+df_objects = df_objects.filter(f"ST_Contains(ST_GeomFromWKT('{spatial_filter}'), geometry) = true")
+df_objects = df_objects.repartition(800)
+
+df_objects.cache()
+
+df_objects.createOrReplaceTempView("objects")
+
+print(df_objects.rdd.getNumPartitions())
+print(df_objects.count())
+
+```
+
+## Run KNN Join
+
+The spatial SQL below demonstrates the new SQL syntax for performing KNN joins on the Wherobots platform.
+
+```python
+%%time
+
+df_knn_join = sedona.sql("""
+SELECT
+    QUERIES.GEOMETRY AS QUERIES_GEOM,
+    QUERIES.ID AS QID,
+    OBJECTS.GEOMETRY AS OBJECTS_GEOM,
+    ST_DISTANCESPHERE(QUERIES.GEOMETRY, OBJECTS.GEOMETRY) AS DISTANCE,
+    ST_MAKELINE(QUERIES.GEOMETRY, OBJECTS.GEOMETRY) AS LINE
+FROM QUERIES
+JOIN OBJECTS ON ST_KNN(QUERIES.GEOMETRY, OBJECTS.GEOMETRY, 4, FALSE)
+""")
+
+# cache for further queries and visualization
+df_knn_join.cache()
+
+total_count = df_knn_join.count()
+print(total_count)
+
+```
+
+```python
+# Select N unique QID rows
+df_unique_qid = df_knn_join.dropDuplicates(["QUERIES_GEOM"])
+
+# Perform an inner join to get all rows from join_df that have QIDs in unique_qid_df
+df_related_rows = df_knn_join.join(df_unique_qid, on="QID", how="inner").select(df_knn_join["*"])
+
+df_unique_qid.cache()
+df_related_rows.cache()
+
+df_related_rows.count()
+```
+
+```python
+# create map for the results
+map_view = SedonaKepler.create_map(df_unique_qid.select('QUERIES_GEOM'), name="PLACES")
+SedonaKepler.add_df(map_view, df=df_related_rows.select('OBJECTS_GEOM', 'DISTANCE').withColumnRenamed("OBJECTS_GEOM", "geometry"), name="FLIGHTS")
+SedonaKepler.add_df(map_view, df=df_related_rows.select('LINE', 'DISTANCE').withColumnRenamed("LINE", "geometry"), name="KNN LINES")
+
+# show the map
+map_view
+```

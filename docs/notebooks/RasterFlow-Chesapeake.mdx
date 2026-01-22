@@ -1,0 +1,233 @@
+---
+title: "Detecting roads with RasterFlow"
+description: "This notebook will guide you through detecting roads from aerial imagery, using Wherobots RasterFlow and the ChesapeakeRSC model. You will gain a hands-on un..."
+---
+
+<img src="assets/img/chesapeakersc-banner.jpg" />
+
+
+This notebook will guide you through detecting roads from aerial imagery, using Wherobots RasterFlow and the ChesapeakeRSC model. You will gain a hands-on understanding of how to run models like ChesapeakeRSC on your selected area of interest, vectorize the model outputs, and work with those vectors in WherobotsDB.
+
+### ChesapeakeRSC
+
+The [ChesapeakeRSC](https://github.com/isaaccorley/ChesapeakeRSC)<sup>1</sup> model is an open source segmentation model that can detect roads from high resolution imagery, even when those roads may be occluded by tree cover.
+
+This model predicts 2 classes: 
+- background
+- road
+
+It was trained on high resolution imagery from the [National Agriculture Imagery Program (NAIP)](https://www.usgs.gov/centers/eros/science/usgs-eros-archive-aerial-photography-national-agriculture-imagery-program-naip) and labeled land cover data for the state of Maryland in the United States. 
+
+## Selecting an Area of Interest (AOI)
+We will choose an Area of Interest (AOI) for our analysis. ChesapeakeRSC was trained on select geographies in the Northeastern United States.  
+
+We will try it out in Montgomery County, Maryland.
+
+```python
+import wkls
+import geopandas as gpd
+import os
+
+# Generate a geometry for Montgomery County, Maryland using Well-Known Locations (https://github.com/wherobots/wkls)
+gdf = gpd.read_file(wkls['us']['md']['Montgomery County'].geojson())
+
+# Save the geometry to a parquet file in the user's S3 path
+aoi_path = os.getenv("USER_S3_PATH") + "montgomery.parquet"
+gdf.to_parquet(aoi_path)
+```
+
+## Initializing the RasterFlow client
+
+```python
+from datetime import datetime
+
+from rasterflow_remote import RasterflowClient
+
+from rasterflow_remote.data_models import (
+    ModelRecipes, 
+    VectorizeMethodEnum
+)
+
+rf_client = RasterflowClient()
+```
+
+## Running a model
+
+RasterFlow has pre-defined workflows to simplify orchestration of the processing steps for model inference.  These steps include:
+* Ingesting imagery for the specified Area of Interest (AOI)
+* Generating a seamless image from multiple image tiles (a mosaic) 
+* Running inference with the selected model
+
+The output is a Zarr store of the model outputs.
+
+Note: This step will take approximately 30 minutes to complete.
+
+```python
+model_outputs = rf_client.build_and_predict_mosaic_recipe(
+    # Path to our AOI in GeoParquet or GeoJSON format
+    aoi = aoi_path,
+
+    # Date range for imagery to be used by the model
+    start = datetime(2017, 1, 1),
+    end = datetime(2018, 1, 1),
+
+    # Coordinate Reference System EPSG code for the output mosaic   
+    crs_epsg = 3857,
+
+    # The model recipe to be used for inference (ChesapeakeRSC in this case)
+    model_recipe = ModelRecipes.CHESAPEAKE_RSC
+)
+
+print(model_outputs)
+```
+
+## Visualize a subset of the model outputs
+We will use hvplot and datashader to visualize a small subset of the model outputs.
+
+```python
+# Import libraries for visualization and coordinate transformation
+import hvplot.xarray
+import xarray as xr
+import s3fs 
+import zarr
+from pyproj import Transformer
+from holoviews.element.tiles import EsriImagery 
+
+# Open the Zarr store
+fs = s3fs.S3FileSystem(profile="default", asynchronous=True)
+zstore = zarr.storage.FsspecStore(fs, path=model_outputs[5:])
+ds = xr.open_zarr(zstore)
+
+# Create a transformer to convert from lat/lon to meters
+transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
+
+# Transform bounding box coordinates from lat/lon to meters
+min_lon = -77.07
+max_lon = -77.05
+min_lat = 39.17
+max_lat = 39.19
+
+(min_x, max_x), (min_y, max_y) = transformer.transform(
+    [min_lon, max_lon], 
+    [min_lat, max_lat]
+)
+
+# Select the height variable and slice the dataset to the bounding box
+# y=slice(max_y, min_y) handles the standard "North-to-South" image orientation
+ds_subset = ds.sel(band="road",
+    x=slice(min_x, max_x), 
+    y=slice(max_y, min_y) 
+)
+
+# Select the first time step and extract the variables array
+arr_subset = ds_subset.isel(time=0)["variables"]
+
+# Create a base map layer using Esri satellite imagery
+base_map = EsriImagery()
+
+# Create an overlay layer from the model outputs with hvplot
+output_layer = arr_subset.hvplot(
+    x = "x",
+    y = "y",
+    geo = True,           # Enable geographic plotting
+    dynamic = True,       # Enable dynamic rendering for interactivity
+    rasterize = True,     # Use datashader for efficient rendering of large datasets
+    cmap = "viridis",     # Color map for visualization
+    aspect = "equal",     # Maintain equal aspect ratio
+    title = "ChesapeakeRSC Model Outputs" 
+).opts(
+    width = 600, 
+    height = 600,
+    alpha = .7           # Set transparency to see the base map underneath
+)
+
+# Combine the base map and output layer
+final_plot = base_map * output_layer
+final_plot
+```
+
+## Vectorize the raster model outputs
+The output for the ChesapeakeRSC model is a raster with two classes: background and road.  
+
+We can run a seperate flow to convert the roads into vector geometries, based on the confidence threshold.  Converting these results to geometries allows us to more easily post process the results or join the resuilts with other vector data.
+
+```python
+# Determine the classes that are predicted by the model
+model_features = xr.open_zarr(zstore)['band'].data.tolist()
+
+# Remove the 'background' class for vectorization
+vector_features = [f for f in model_features if f != 'background']  
+```
+
+```python
+# Note: this should take about 5 minutes to complete
+vectorized_results = rf_client.vectorize_mosaic(
+        store = model_outputs,
+        features = vector_features,
+        threshold = 0.5,
+        vectorize_method = VectorizeMethodEnum.SEMANTIC_SEGMENTATION_RASTERIO,
+        vectorize_config={"stats": True, "medial_skeletonize": False}
+    )
+
+print(vectorized_results)
+```
+
+## Save the vectorized results to the catalog
+We can store these vectorized outputs in the catalog by using WherobotsDB to persist the GeoParquet results.
+
+```python
+from sedona.spark import *
+
+config = SedonaContext.builder().getOrCreate()
+sedona = SedonaContext.create(config)
+```
+
+```python
+sedona.sql("CREATE DATABASE IF NOT EXISTS org_catalog.chesapeake_db")
+
+df = sedona.read.format("geoparquet").load(vectorized_results)
+df = df.withColumnRenamed("label", "layer")
+df.writeTo("org_catalog.chesapeake_db.chesapeake_vectorized").createOrReplace()
+```
+
+## Visualize the vectorized results
+
+To visualize the vectorized results, we will choose a small subset of the outputs that intersect with a bounding box around the University of Maryland campus.  We will also filter out results with a score lower than 0.6.
+
+```python
+from sedona.spark.sql.st_constructors import ST_MakeEnvelope
+from sedona.spark.sql.st_predicates import ST_Intersects
+import pyspark.sql.functions as f
+
+df = df.filter(
+    ST_Intersects(f.col("geometry"), ST_MakeEnvelope(min_lon, min_lat, max_lon, max_lat))
+).filter("score_mean > 0.7")
+```
+
+```python
+from sedona.spark.maps.SedonaKepler import SedonaKepler
+map = SedonaKepler.create_map(df=df, name="Vectorized results")
+map
+```
+
+## Generate PM Tiles for visualization
+To improve visualization performance of a large number of geometries, we can use Wherobots built-in high performance PM tile generator.
+
+```python
+from wherobots import vtiles
+
+full_tiles_path = os.getenv("USER_S3_PATH") + "tiles.pmtiles"
+vtiles.generate_pmtiles(df, full_tiles_path)
+```
+
+```python
+vtiles.show_pmtiles(full_tiles_path)
+```
+
+```python
+full_tiles_path
+```
+
+### References
+
+1. **Robinson, C., Corley, I., Ortiz, A., Dodhia, R., Lavista Ferres, J. M., & Najafirad, P. (2024).** Seeing the roads through the trees: A benchmark for modeling spatial dependencies with aerial imagery. *arXiv preprint arXiv:2401.06762*. https://arxiv.org/abs/2401.06762

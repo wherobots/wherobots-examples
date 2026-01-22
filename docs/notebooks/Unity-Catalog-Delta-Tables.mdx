@@ -1,0 +1,265 @@
+---
+title: "Geospatial ETL with Wherobots and Databricks Unity Catalog"
+description: "This notebook builds a geospatial ETL (Extract, Transform, Load) pipeline using Wherobots and Databricks Unity Catalog."
+---
+
+
+This notebook builds a geospatial ETL (Extract, Transform, Load) pipeline using Wherobots and Databricks Unity Catalog.
+
+Using a weather forecast dataset, you will:
+* **Read** a Managed Delta table from Unity Catalog.
+* **Transform** coordinates into spatial `POINT` geometries.
+* **Enrich** the data by calculating each forecast's proximity to Tokyo to create a new threat feature.
+* **Write** the results back to a new external Delta table, dropping the geometry column as it is not natively supported by Databricks.
+    * **Note:** This example writes to an External Delta table because Databricks prevents external platforms like Wherobots from writing to Managed tables.
+
+This notebook provides the building blocks for you to perform more complex spatial analysis and processing on your own data in Wherobots.
+
+The exercises in this notebook use the [Accuweather](https://marketplace.databricks.com/details/8c8ad63e-d96e-47d6-b56b-a42affbdb227/AccuWeather_Forecast-Weather-Data) `forecast_daily_calendar_imperial` table dataset, which comes pre-loaded in your Databricks workspace.
+
+> **Data Disclaimer:** Review the following about the dataset used in this notebook:
+> * The weather data used in this demonstration originates from the ``samples``.``accuweather``.``forecast_daily_calendar_imperial`` dataset provided within Databricks.
+> * Wherobots is not responsible for the accuracy or completeness of this data.
+> * This analysis is based on daily forecast data and does not represent real-time conditions.
+> * For complete information about the dataset, go to [Forecast Weather Data](https://marketplace.databricks.com/details/8c8ad63e-d96e-47d6-b56b-a42affbdb227/AccuWeather_Forecast-Weather-Data) and click **Documentation** within the Product Links section.
+
+## Prerequisites
+
+To run this example notebook, you'll need:
+
+- An **Existing Databricks catalog and schema governed** by Unity Catalog.
+    - Optionally, you can create a new [catalog](https://docs.databricks.com/aws/en/catalogs/create-catalog) and [schema](https://docs.databricks.com/aws/en/schemas/create-schema) in Databricks.
+- A **Connection** between Wherobots and your Unity Catalog-governed schema and catalog.
+    - For more information on connecting Unity Catalog to your Wherobots Organization, including the necessary Databricks catalog permissions, see [Connect to Unity Catalog](https://docs.wherobots.com/latest/get-started/initial-storage/connect-to-unity-catalog/).
+    - If your Unity Catalog has been successfully connected to Wherobots, you will be able to see it in the [**Wherobots Data Hub**](https://cloud.wherobots.com/data-hub).
+    - The necessary permissions to read from and write to Delta tables within your Databricks Unity Catalog.
+
+> **Note:** Wherobots discovers Databricks catalogs only at your runtime's initialization.
+> If you created a new Databricks catalog _after_ the Wherobots runtime was started, that catalog won't be visible until you restart the Wherobots runtime.
+
+> To make a new catalog visible, complete the following steps to restart the runtime:
+
+> 1. **Save active work:** Ensure any running jobs or SQL sessions are saved.
+> 2. **Destroy runtime:** Stop the current Wherobots runtime in [Wherobots Cloud](https://cloud.wherobots.com/).
+> 3. **Start a new runtime:** Start the runtime again.
+
+## In Databricks
+
+Create a table in your Unity Catalog that copies the data provided by Accuweather's `samples`.`accuweather`.`forecast_daily_calendar_imperial` dataset. After copying this data into its own Delta table, you can query and modify it in Wherobots.
+
+### Create the Sample Table
+
+Update the `YOUR-CATALOG` and `YOUR-SCHEMA` variables (maintaining the backticks around each) in the cell below to point to the resources in your Databricks environment where you have permission to create tables.
+
+Run the following command in a **Databricks SQL editor** to create a new table with the necessary sample data from the built-in Accuweather sample data.
+
+```sql
+CREATE OR REPLACE TABLE `YOUR-CATALOG`.`YOUR-SCHEMA`.`forecast_daily_calendar_imperial_wbc_demo`
+USING DELTA
+AS
+SELECT *
+FROM `samples`.`accuweather`.`forecast_daily_calendar_imperial`
+LIMIT 10000;
+```
+
+In your Databricks workspace, confirm that a new Managed Delta table has been created in your intended location.
+
+## In a Wherobots Notebook
+
+Run the following commands in this Wherobots notebook.
+
+### Import Libraries
+
+```python
+from sedona.spark import *
+from pyspark.sql.functions import expr, col, when, lit
+```
+
+###  Set up Wherobots notebook variables
+
+To define the resources for this ETL pipeline, update the following variables in this Wherobots notebook
+
+To list **available Databricks external locations** to use in the `OUTPUT_TABLE_BASE_PATH` and find the URL you need, run the following SQL command in a Databricks notebook cell.
+
+```sql
+%sql
+SELECT *
+FROM system.information_schema.external_locations;
+```
+
+The query will show all locations you have access to. Copy the path from the `url` column and use it in your code.
+
+```python
+# Change this to your Databricks catalog name
+CATALOG = "YOUR-CATALOG"
+# Change this to your Databricks schema name
+SCHEMA  = "YOUR-SCHEMA"
+SOURCE_TABLE = "forecast_daily_calendar_imperial_wbc_demo"
+OUTPUT_TABLE = "transformed_forecast_daily_calendar_imperial"
+# Fill in with the root URL for your external location which can begin with s3://databricks-workspace
+OUTPUT_TABLE_BASE_PATH = 'YOUR-DATABRICKS-EXTERNAL-LOCATION-BASE-PATH'
+# Choose a specific folder name you want to create the output table within
+OUTPUT_TABLE_FOLDER = 'YOUR-DATABRICKS-EXTERNAL-LOCATION-FOLDER-NAME'
+
+
+SOURCE_TABLE_FQN = f"`{CATALOG}`.`{SCHEMA}`.`{SOURCE_TABLE}`"
+OUTPUT_TABLE_FQN = f"`{CATALOG}`.`{SCHEMA}`.`{OUTPUT_TABLE}`"
+OUTPUT_TABLE_LOCATION = f"{OUTPUT_TABLE_BASE_PATH}/{OUTPUT_TABLE_FOLDER}"
+
+
+print("Target Unity Catalog input Delta table:", SOURCE_TABLE_FQN)
+print("Target Unity Catalog output Delta table:", OUTPUT_TABLE_FQN)
+print("Target Unity Catalog output physical location:", OUTPUT_TABLE_LOCATION)
+
+```
+
+### Create the SedonaContext
+
+The following creates a `SedonaContext` object.
+
+```python
+config = SedonaContext.builder().getOrCreate()
+sedona = SedonaContext.create(config)
+```
+
+### Confirm that you can read data from the Unity Catalog table in your Wherobots Notebook
+
+Read the table and confirm that it returns a DataFrame.
+
+Read the table and confirm that it returns a DataFrame containing the Accuweather forecast data.
+
+```python
+table_smoke_test = sedona.read.table(SOURCE_TABLE_FQN)
+table_smoke_test.show(10)
+```
+
+### Running Spatial Operations
+
+In this step, we will convert the latitude and longitude columns from `forecast_daily_calendar_imperial_wbc_demo` into a `Point` object and add that object to the table.
+
+This following code transforms latitude and longitude data in a DataFrame into a spatially-aware geometry column and then validates the result.
+
+In short, it adds a new column named `point` by converting latitude and longitude values into a standard geographic point.
+
+#### Proximity Analysis: Calculate Distances to Key Locations
+In this section, you will perform a proximity analysis to calculate the distance from each weather forecast in your dataset to a specific point of interest. This allows you to filter data based on location and answer questions like, "Which of these weather events is closest to my operations center?"
+
+##### A Practical Example
+Imagine your business has major operations or supply chain dependencies in the **Tokyo metropolitan area**, where severe weather can disrupt logistics and public safety. Your raw data contains thousands of forecasts across the region but lacks the context of which ones pose a direct threat to the city.
+
+By defining **Tokyo's coordinates**, you can calculate the distance from every weather event to the city center, saving the result in a new column like `distance_to_tokyo_meters`.
+
+With this new column, your data becomes an early-warning system. You can now easily ask critical business questions like:
+
+> "Show me cities with **wind gusts over 40 mph** or **heavy precipitation** within a **500-kilometer radius** of Tokyo."
+
+This analysis turns your spatial data into actionable intelligence, allowing you to focus only on the events that directly impact your operations.
+
+```python
+# Load Data and Create Geometry
+# Read the table from Unity Catalog and create the necessary geometry column for spatial analysis.
+
+df = sedona.read.table(SOURCE_TABLE_FQN)
+```
+
+```python
+# Create a 'point' geometry column from the latitude and longitude columns.
+
+df_w_geom = df.withColumn(
+    "point",
+    expr("ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)")
+)
+```
+
+```python
+# Proximity Analysis: Calculate Distance to Tokyo
+# This is the core spatial operation. We calculate the distance from every weather
+# forecast point to our point of interest, Tokyo.
+
+# Define the point of interest (Tokyo) as a Well-Known Text (WKT) string.
+
+tokyo_geom_wkt = "POINT (139.6917 35.6895)"
+
+# Wherobots efficiently calculates the spherical distance in meters for every row.
+df_with_distance = df_w_geom.withColumn(
+    "distance_to_tokyo_meters",
+    expr(f"ST_DistanceSphere(point, ST_SetSRID(ST_GeomFromWKT('{tokyo_geom_wkt}'), 4326))")
+)
+
+print("Calculated distance to Tokyo for each forecast.")
+df_with_distance.select("distance_to_tokyo_meters").show(5)
+```
+
+```python
+# Define thresholds for our alerts
+# 40 is the minimum wind speed that qualifies as a "Severe Wind" by the Beaufort scale.
+# 0.30 inches of precipitation per hour in a 24-hour period is considered "Heavy Rain" by the National Weather Service.
+proximity_threshold_km = 500.0
+severe_wind_mph = 40
+heavy_precipitation_in = 0.30
+
+# Use a nested 'when' clause to build a descriptive alert string.
+df_with_threats = df_with_distance.withColumn(
+    "threat_description",
+    when(col("distance_to_tokyo_meters") > proximity_threshold_km * 1000, lit("No Threat (Distance exceeds proximity threshold)"))
+    .when(
+        (col("wind_gust_max") >= severe_wind_mph) & (col("precipitation_lwe_total") >= heavy_precipitation_in),
+        lit("High Wind & Flood Watch Near Tokyo")
+    )
+    .when(col("wind_gust_max") >= severe_wind_mph, lit("High Wind Warning Near Tokyo"))
+    .when(col("precipitation_lwe_total") >= heavy_precipitation_in, lit("Flood Watch Near Tokyo"))
+    .otherwise(lit("Normal Conditions Near Tokyo"))
+)
+
+print("Generated new 'threat_description' feature:")
+df_with_threats.select("city_name", "wind_gust_max", "precipitation_lwe_total", "threat_description").show()
+```
+
+### Writing the Results
+
+In this step, you will write the results back to an external Delta table managed by Unity Catalog.
+
+> **Note:** Before storing the data in Databricks, we are going to convert the geometry column back int WKT and then drop the `point` column. This is because Databricks does not natively support geometries. Also, keep in mind that when you write the data back to Databricks, your user may not have the necessary permissions to query it; you will need to grant those permissions explicitly in the Unity Catalog. 
+
+#### Data preparation for Databricks
+
+Before loading the data into Databricks, you must drop the 'point' column because it contains the `geometry` datatype, `POINT`.
+
+This procedure is required because Databricks does not offer native support for columns containing geometry data types.
+
+> **Note:** A geometry data type is a special data type used in spatial databases to represent geographic features such as points (`POINT`), lines (`LINESTRING`), or polygons (`POLYGON`). You can learn more about [Introduction to Spatial Data](https://docs.wherobots.com/latest/get-started/intro-to-spatial-data/) in the Wherobots Documentation.
+
+```python
+final_df = df_with_threats.select(
+    col("city_name"),
+    col("date"),
+    col("temperature_avg"),
+    col("wind_gust_max"),
+    col("precipitation_lwe_total"),
+    col("distance_to_tokyo_meters"),
+    col("threat_description") # This is our new, actionable feature!
+)
+
+print("\nFinal schema to be written to Unity Catalog:")
+final_df.printSchema()
+
+# Write the feature back to Unity Catalog
+
+final_df.createOrReplaceTempView("temp_final_df_view")
+
+# Now, execute the SQL command to create the table from the temporary view.
+sedona.sql(f"""
+  CREATE OR REPLACE TABLE {OUTPUT_TABLE_FQN}
+  USING delta
+  LOCATION '{OUTPUT_TABLE_LOCATION}'
+  AS SELECT * FROM temp_final_df_view
+""")
+```
+
+## Confirm Successful Write to Databricks
+
+If your notebook has run to this point and you see the Spark job status showing `COMPLETED` for all jobs, the process has finished successfully.
+
+This indicates that the data has been successfully written from your Wherobots environment to Databricks.
+
+To double-check: Navigate to your Databricks workspace and verify that the new table has been created as expected.

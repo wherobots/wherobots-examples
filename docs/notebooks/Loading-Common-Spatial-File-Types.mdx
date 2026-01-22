@@ -1,0 +1,141 @@
+---
+title: "Loading Geospatial Data with Wherobots"
+description: "In this notebook, we will demonstrate how to load geospatial data into Wherobots using the following formats:"
+---
+
+
+## 📖 Introduction
+In this notebook, we will demonstrate how to load geospatial data into Wherobots using the following formats:
+
+1. **GeoParquet**
+2. **GeoJSON and Shapefiles**
+3. **Raster Data (GeoTIFF)**
+4. **Overture Maps Data**
+5. **Data from S3**
+
+Each section will walk through the necessary steps with annotated code and provide links to relevant Wherobots documentation.
+
+
+## 🗂 Step 1: Loading GeoParquet Files
+
+### What you'll learn:
+- How to load GeoParquet files into a DataFrame.
+- Perform basic spatial queries.
+
+```python
+# Import necessary libraries
+from sedona.spark import *
+from pyspark.sql import SparkSession
+```
+
+```python
+# Initialize Sedona and Spark session
+config = SparkSession.builder \
+    .appName("Dataset Loader") \
+    .getOrCreate()
+sedona = SedonaContext.create(config)
+```
+
+```python
+# Load GeoParquet data
+gdf = sedona.read.format("geoparquet").load("s3://wherobots-examples/data/mini/es_cn.parquet")
+```
+
+```python
+gdf.printSchema()
+```
+
+📄 **Documentation Reference**: [Loading GeoParquet](https://docs.wherobots.com/#geoparquet-loading)  
+
+## 🌍 Step 2: Loading GeoJSON and Shapefiles
+
+### What you'll learn:
+- How to ingest GeoJSON and Shapefiles.
+
+```python
+# Load GeoJSON file
+geojson_df = sedona.read.format("geojson").load("s3://wherobots-examples/data/mini/2015_Tree_Census.geojson")
+```
+
+```python
+geojson_df.printSchema()
+```
+
+```python
+import pyspark.sql.functions as f
+
+df = sedona.read.format("geojson").load("s3://wherobots-examples/data/mini/2015_Tree_Census.geojson") \
+    .withColumn("address", f.expr("properties['address']")) \
+    .withColumn("spc_common", f.expr("properties['spc_common']")) \
+    .drop("properties").drop("type")
+
+df.printSchema()
+```
+
+```python
+# Load Shapefile
+shapefile_df = sedona.read.format("shapefile").load("s3://wherobots-examples/data/mini/HurricaneSandy/geo_export_2ca210ed-d8b2-4fe6-81eb-53cc96311073.shp")
+```
+
+```python
+# Inspect and perform a query
+shapefile_df.printSchema()
+```
+
+📄 **Documentation Reference**: [Ingesting GeoJSON](https://docs.wherobots.com/#geojson-loading)  
+
+## 🖼️ Step 3: Loading Raster Data (GeoTIFF)
+
+### What you'll learn:
+- How to load raster datasets and inspect metadata.
+
+
+```python
+# Load a GeoTIFF raster file
+raster_df = sedona.read.format("binaryFile").load("s3://wherobots-examples/data/mini/NYC_3ft_Landcover.tif")
+```
+
+```python
+# Convert binary content to a raster object
+raster_df = raster_df.selectExpr("RS_FromGeoTiff(content) as raster")
+```
+
+📄 **Documentation Reference**: [Loading Raster Data](https://docs.wherobots.com/#raster-loading)  
+
+## 🗺️ Step 4: Loading Overture Maps Data
+
+### What you'll learn:
+- Load and query datasets provided by Overture Maps.
+
+
+```python
+# Load Overture Maps building dataset
+buildings_df = sedona.read.format("iceberg").load("wherobots_open_data.overture_maps_foundation.buildings_building")
+```
+
+```python
+# Filter based on geometry (example: within a bounding box)
+bbox_wkt = '''POLYGON((-122.5 37.0, -122.5 37.5, -121.5 37.5, -121.5 37.0, -122.5 37.0))'''
+buildings_filtered = buildings_df.where(ST_Intersects("geometry", f.expr(f'''ST_GeomFromText('{bbox_wkt}')''')))
+```
+
+```python
+# Show results
+buildings_filtered.show()
+```
+
+## 🔮 Next Steps
+
+In this notebook, we demonstrated how to:
+
+1. Load GeoParquet, GeoJSON, Shapefiles, and raster data into Wherobots.
+2. Query spatial data using basic spatial operations.
+3. Integrate datasets directly from S3 and Overture Maps.
+
+### What’s next?
+- Explore **spatial transformations** like buffering or intersecting geometries.
+- Perform **spatial joins** for more advanced analytics.
+- Visualize query results with **SedonaKepler** or **SedonaPyDeck**.
+
+For further details, check out the [Wherobots Documentation](https://docs.wherobots.com).
+

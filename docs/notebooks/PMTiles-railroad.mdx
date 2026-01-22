@@ -1,0 +1,201 @@
+---
+title: "How to generate PMTiles"
+description: "This notebook demonstrates how to generate a PMTiles file from the U.S. Census Bureau's TIGER railroad dataset using Wherobots."
+---
+
+![PMTiles rendered in Esri](./assets/img/pmtiles-rr-banner.png)
+
+
+This notebook demonstrates how to generate a PMTiles file from the U.S. Census Bureau's TIGER railroad dataset using Wherobots.
+
+This notebook is part of a hands-on project that shows you how to generate and visualize PMTiles. It consists of three parts:
+
+1. [Blog Post](https://wherobots.com/pmtiles-rendered-in-esri-maps-api/) – introduces and showcases this capability.
+2. Jupyter Notebook (this file) – step-by-step code for generating the PMTiles file.
+3. [Web Visualization Repo](https://github.com/wherobots/pmtiles-esri-tile-layer) – tile server and client code using the Esri JavaScript SDK.
+
+In this notebook, you will:
+
+- Download and prepare the TIGER railroad shapefile and store it in Wherobots Managed Storage.
+- Filter nationwide data to a specific region, Texas, using Spatial SQL with Sedona.
+- Generate a PMTiles file using the Wherobots `vtiles` library.
+- Visualize the resulting map tiles directly within the notebook.
+
+### Cost to generate PMTiles for Texas
+
+* Time taken: **1m 18s**
+* Cost: **$0.16**
+* Runtime size: **Tiny**
+
+```python
+import os
+import requests
+import zipfile
+import io
+import boto3
+import wkls
+from wherobots import vtiles
+from urllib.parse import urlparse
+from sedona.spark import *
+from pyspark.sql.functions import *
+```
+
+# Download the railroad dataset from TIGER
+
+This piece of code is a helper function that downloads the zipped folder, extracts it, and uploads it to your Managed Storage (S3 bucket).
+
+If the TIGER dataset's FTP server is down, we have mirrored the data in our public S3 bucket:
+
+`s3://wherobots-examples/data/pmtiles-blog/tl_2024_us_rails/`
+
+```python
+def parse_s3_uri(s3_uri):
+    """
+    Parses an S3 URI (e.g., 's3://bucket-name/folder/path')
+    and returns the bucket name and the path.
+    
+    Args:
+        s3_uri (str): The S3 URI string.
+        
+    Returns:
+        tuple: A tuple containing (bucket_name, folder_path).
+    """
+    parsed_uri = urlparse(s3_uri)
+    if parsed_uri.scheme != 's3':
+        raise ValueError("Invalid S3 URI. Must start with 's3://'")
+    return parsed_uri.netloc, parsed_uri.path.lstrip('/')
+
+def download_and_upload_to_s3(zip_url, s3_uri):
+    """
+    Downloads a zip file from a URL using requests, extracts its contents,
+    and uploads each file to an S3 bucket specified by an S3 URI.
+
+    Args:
+        zip_url (str): The URL of the zip file to download.
+        s3_uri (str): The S3 URI (e.g., 's3://bucket-name/folder/path')
+                      where extracted files will be uploaded.
+    """
+    try:
+        # Ignore the InsecureRequestWarning when verify=False
+        requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
+
+        # 1. Parse the S3 URI
+        s3_bucket, s3_path_prefix = parse_s3_uri(s3_uri)
+
+        # 2. Download the zip file into memory, ignoring SSL certificate errors
+        print("Downloading zip file...")
+        response = requests.get(zip_url, verify=False)
+        response.raise_for_status()
+        
+        # 3. Extract and upload each file to S3
+        zip_buffer = io.BytesIO(response.content)
+        s3_client = boto3.client('s3')
+        with zipfile.ZipFile(zip_buffer, 'r') as zip_file:
+            file_list = zip_file.namelist()
+            print(f"Found {len(file_list)} files in the zip.")
+            for filename in zip_file.namelist():
+                if not filename.endswith('/'):
+                    with zip_file.open(filename, 'r') as file_in_zip:
+                        file_buffer = io.BytesIO(file_in_zip.read())
+
+                        s3_key = f"{s3_path_prefix}/{filename}".lstrip('/')
+
+                        # Upload the file from memory to S3
+                        print(f"Uploading {s3_key} to {s3_bucket}...")
+                        s3_client.upload_fileobj(file_buffer, s3_bucket, s3_key)
+            
+            print("All files extracted and uploaded to S3 successfully!")
+                        
+    except requests.exceptions.RequestException as e:
+        print(f"HTTP Request failed: {e}")
+    except zipfile.BadZipFile:
+        print("The downloaded file is not a valid zip file.")
+    except ValueError as e:
+        print(f"Input error: {e}")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+```
+
+```python
+zip_url = 'https://www2.census.gov/geo/tiger/TIGER2024/RAILS/tl_2024_us_rails.zip'
+base_s3_uri = f'{os.getenv("USER_S3_PATH")}PMTiles-example'
+s3_destination_uri = f'{base_s3_uri}/data'
+```
+
+```python
+download_and_upload_to_s3(zip_url, s3_destination_uri)
+```
+
+## Getting WherobotsDB started
+
+This gives you access to WherobotsDB and PMTiles generator
+
+```python
+config = SedonaContext.builder().getOrCreate()
+
+sedona = SedonaContext.create(config)
+```
+
+## Read in the files that we downloaded
+
+```python
+df_rail = sedona.read.format("shapeFile").load(s3_destination_uri)
+```
+
+## Filter by Texas boundary
+
+Feel free to alter this to some other US state or remove it entirely to get the same experience of the blog.
+
+The code to generate PMTiles on the entire dataset:
+
+```python
+df_rail = df_rail.withColumn("layer", lit("railroads"))
+```
+
+[Click here to learn how to select another state using the `wkls` library.](https://github.com/wherobots/wkls?tab=readme-ov-file#quick-start)
+
+```python
+texas_wkt = wkls.us.tx.wkt()
+
+df_rail = df_rail \
+                .where(f"ST_Intersects(geometry, ST_GeomFromWKT('{texas_wkt}'))")\
+                .withColumn("layer", lit("railroads"))
+```
+
+```python
+df_rail.printSchema()
+```
+
+## FYI about the data
+
+MTFCC stands for MAF/TIGER Feature Class Code and is a code that is assigned by the U.S. Census Bureau to classify and describe geographic objects or features, such as roads, rivers, and railroad tracks. The MTFCC code `R1011` means a Railroad Feature (Main, Spur, or Yard). 
+
+LINEARID is a Linear Feature Identifier, a unique ID number used in U.S. Census Bureau TIGER (Topologically Integrated Geographic Encoding and Referencing) data to associate a street or feature name with its location, such as an edge or address range in the spatial data. 
+
+```python
+df_rail.show()
+```
+
+```python
+df_rail.select("LINEARID").distinct().count() == df_rail.count()
+```
+
+## Generating the PMTiles
+
+A single line of code generates the PMTiles file from the processed DataFrame and saves it directly to your S3 bucket.
+
+```python
+df_rail.count()
+```
+
+```python
+s3_full_path = f"{base_s3_uri}/pmtiles/railroads.pmtiles"
+
+vtiles.generate_pmtiles(df_rail, s3_full_path)
+```
+
+Alternatively, you can load the PMTiles to [Wherobots hosted PMTiles viewer](https://tile-viewer.wherobots.com/) to visualize it.
+
+```python
+vtiles.show_pmtiles(s3_full_path)
+```

@@ -1,0 +1,126 @@
+---
+title: "Map Matching"
+description: "In this notebook we introduce Wherobots Map Matching, a library for creating map applications with large scale geospatial data. Map matching is a crucial ste..."
+---
+
+
+In this notebook we introduce Wherobots Map Matching, a library for creating map applications with large scale geospatial data. Map matching is a crucial step in many transportation analyses, aligning a sequence of observed user positions (usually from GPS) onto a digital map. This identifies the most likely sequence of roads that a vehicle has traversed. 
+
+We will explore matching noisy GPS trajectory data to road segments using OpenStreetMap (OSM) road network data. [Read more about Wherobots Map Matching in the Wherobots documentation.](https://docs.wherobots.com/latest/tutorials/wherobotsai/map-matching/map_matching/)
+
+
+## Define Sedona context
+
+```python
+import json
+from shapely.geometry import LineString
+from pyspark.sql.window import Window
+from pyspark.sql.functions import col, expr, udf, collect_list, struct, row_number, lit
+from sedona.spark import *
+
+config = SedonaContext.builder().getOrCreate()
+sedona = SedonaContext.create(config)
+```
+
+## Load OpenStreetMap road data
+
+We will call `load_osm` for the road network we will match against. Whereobots Map Matcher uses OSM's XML file format to load detailed, open source road network data. We've got a sample dataset for the Ann Arbor, Michigan area that we will use. The `[car]` parameter tells `matcher` to filter anything out of the network that is not big enough for motor vehicle traffic.
+
+```python
+from wherobots import matcher
+
+roads_df = matcher.load_osm("s3://wherobots-examples/data/osm_AnnArbor_large.xml", "[car]")
+
+roads_df.show(10)
+```
+
+### Load sample GPS tracking data from VED
+
+For this analysis, we're leveraging the [Vehicle Energy Dataset (VED)](https://github.com/gsoh/VED). VED is a comprehensive dataset capturing one year of GPS trajectories for 383 vehicles (including gasoline vehicles, HEVs, and PHEV/EVs) in the Ann Arbor area. The data spans about 374,000 miles/600,000 km and includes details on fuel, energy, speed, and auxiliary power usage. Driving scenarios cover diverse conditions, from highways to traffic-dense downtown areas and across four seasons.
+
+> Source: "Vehicle Energy Dataset (VED), A Large-scale Dataset for Vehicle Energy Consumption Research" by Geunseob (GS) Oh, David J. LeBlanc, Huei Peng. Published in IEEE Transactions on Intelligent Transportation Systems (T-ITS), 2020.
+
+Each row in the dataset represents a spatial-temporal point of one vehicle's journey. We are going to use these five columns:
+
+- VehId — Vehicle ID
+- Trip — Trip ID; unique per vehicle
+- Timestamp(ms)
+- Latitude[deg]
+- Longitude[deg]
+
+```python
+gps_tracks_df = sedona.read.csv("s3://wherobots-examples/data/VED_171101_week.csv", header=True, inferSchema=True)
+gps_tracks_df = gps_tracks_df.select(['VehId', 'Trip', 'Timestamp(ms)','Latitude[deg]', 'Longitude[deg]'])
+
+gps_tracks_df.show(10)
+```
+
+## Aggregate GPS points into LineString geometries
+
+The combination of VehId and Trip together form a unique key for our dataset. This combination allows us to isolate individual vehicle trajectories. Every unique pair signifies a specific trajectory of a vehicle. Raw GPS points, while valuable, can be scattered, redundant, and lack context when viewed independently. By organizing these individual points into coherent trajectories represented by LineString geometries, we enhance our ability to interpret, analyze, and apply the data in meaningful ways.
+
+A `groupBy` operation on 'VehId' and 'Trip' isolates each trip, a LineString representing the vehicle's course. We sort the rows by timestamps so the LineString follows the correct order of the GPS data points.
+
+We'll write a `rows_to_linestring` function for Spark to process Sedona DataFrame rows into LineString geometries, then collect them in a new DataFrame, `trips_df`.
+
+Finally, we'll give each trip a unique ID using `row_number`.
+
+```python
+def rows_to_linestring(rows):
+    sorted_rows = sorted(rows, key=lambda x: x['Timestamp(ms)'])
+    coords = [(row['Longitude[deg]'], row['Latitude[deg]']) for row in sorted_rows]
+    linestring = LineString(coords)
+    return linestring
+
+linestring_udf = udf(rows_to_linestring, GeometryType())
+
+trips_df = (gps_tracks_df
+            .groupBy("VehId", "Trip")
+            .agg(collect_list(struct("Timestamp(ms)", "Latitude[deg]", "Longitude[deg]")).alias("coords"))
+            .withColumn("geometry", linestring_udf("coords"))
+           )
+
+window_spec = Window.partitionBy(lit(5)).orderBy("VehId", "Trip")
+trips_df = trips_df.withColumn("ids", row_number().over(window_spec) - 1)
+trips_df = trips_df.filter(trips_df['ids'] < 100) # Filter to 100 trips because this is an example notebook; no need to be exhaustive
+trips_df = trips_df.select("ids", "VehId", "Trip", "coords", "geometry")
+
+trips_df.show()
+```
+
+## Perform Map Matching
+
+Finally, we will pass the road network and the aggregated trips into `matcher`, and tell it the name of the relevant columns (`geometry` in both tables).
+
+- **ids**: A unique identifier for each trajectory, representing a distinct vehicle journey.
+- **observed_points**: Represents the original GPS trajectories. These are the linestrings formed from the raw GPS points collected during each vehicle journey.
+- **matched_points**: The processed trajectories post map-matching. These linestrings are aligned onto the actual road network, correcting for any GPS inaccuracies.
+- **matched_nodes**: A list of node identifiers from the road network that the matched trajectory passes through. These nodes correspond to intersections, turns, or other significant points in the road network.
+
+```python
+sedona.conf.set("wherobots.tools.mm.maxdist", "100")
+sedona.conf.set("wherobots.tools.mm.maxdistinit", "100")
+sedona.conf.set("wherobots.tools.mm.obsnoise", "40")
+
+matched_routes_df = matcher.match(roads_df, trips_df, "geometry", "geometry")
+
+matched_routes_df.show()
+```
+
+## Visualize the result using SedonaKepler
+
+The `map_config.json` file specifies the bounding box and how to draw the road network and the source and matched routes.
+
+```python
+with open('assets/conf/map_config.json', 'r') as file:
+    map_config = json.load(file)
+    
+viz = SedonaKepler.create_map()
+
+SedonaKepler.add_df(viz, roads_df.select("geometry"), name="Road Network")
+SedonaKepler.add_df(viz, matched_routes_df.selectExpr("observed_points AS geometry", "ids AS trip_id"), name="Observed Points")
+SedonaKepler.add_df(viz, matched_routes_df.selectExpr("matched_points AS geometry", "ids AS trip_id"), name="Matched Points")
+viz.config = map_config
+
+viz
+```

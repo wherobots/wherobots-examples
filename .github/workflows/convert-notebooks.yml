@@ -1,0 +1,100 @@
+name: Convert Notebooks to MDX
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**/*.ipynb'
+      - '.github/workflows/convert-notebooks.yml'
+      - '.github/workflows/scripts/notebook_to_mdx.py'
+  pull_request:
+    paths:
+      - '**/*.ipynb'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Get changed notebooks
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+        with:
+          files: |
+            **/*.ipynb
+          files_ignore: |
+            **/Raster_Inference*.ipynb
+
+      - name: Convert notebooks to MDX
+        if: steps.changed-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
+        run: |
+          # If workflow_dispatch or no specific changes detected, convert all
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ -z "${{ steps.changed-files.outputs.all_changed_files }}" ]; then
+            echo "Converting all notebooks..."
+            python .github/workflows/scripts/notebook_to_mdx.py \
+              Getting_Started/ \
+              Analyzing_Data/ \
+              Reading_and_Writing_Data/ \
+              Open_Data_Connections/ \
+              scala/ \
+              -o docs/notebooks \
+              --exclude-prefix Raster_Inference \
+              -v
+          else
+            echo "Converting changed notebooks..."
+            python .github/workflows/scripts/notebook_to_mdx.py \
+              ${{ steps.changed-files.outputs.all_changed_files }} \
+              -o docs/notebooks \
+              --exclude-prefix Raster_Inference \
+              -v
+          fi
+
+      - name: Update mint.json navigation
+        if: steps.changed-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
+        run: |
+          python .github/workflows/scripts/update_mint_navigation.py
+
+      - name: Check for changes
+        id: git-check
+        run: |
+          git add docs/
+          if git diff --staged --quiet; then
+            echo "changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push changes
+        if: steps.git-check.outputs.changes == 'true' && github.event_name == 'push'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git commit -m "docs: update MDX files from notebooks"
+          git push
+
+      - name: Create PR comment
+        if: steps.git-check.outputs.changes == 'true' && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '📚 **Notebook changes detected!**\n\nMDX documentation files will be updated when this PR is merged.'
+            })

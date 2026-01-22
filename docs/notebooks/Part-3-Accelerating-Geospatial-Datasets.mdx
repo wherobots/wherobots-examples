@@ -1,0 +1,161 @@
+---
+title: "Accelerating Geospatial Datasets"
+description: "This notebook will show you how to optimize the way you work with large geospatial datasets — using Wherobots to efficiently manage, cluster, and export spat..."
+---
+
+
+This notebook will show you how to optimize the way you work with large geospatial datasets — using Wherobots to efficiently manage, cluster, and export spatial data for high-performance analysis and downstream use.
+
+This notebook will teach you to:
+
+* Write DataFrames as managed tables in WherobotsDB
+* Apply spatial clustering to improve query performance on large datasets
+* Export geospatial tables to Geoparquet for sharing or external processing
+* Confirm export success and inspect output
+* Use both Python and SQL workflows for data export
+
+```python
+from sedona.spark import *
+
+config = SedonaContext.builder() \
+    .getOrCreate()
+
+sedona = SedonaContext.create(config)
+```
+
+# Working with tabular data in Wherobots
+
+Wherobots supports loading structured tabular data directly from cloud storage. In this example, we are working with the GDELT dataset — a global event database published as daily CSV files on AWS S3.
+
+When working with your own data, you can:
+
+* Load data into Wherobots Cloud managed storage ([Docs](https://docs.wherobots.com/latest/develop/storage-management/managed-storage/?h=managed+st))
+* Connect directly to cloud storage like AWS S3 ([Docs](https://docs.wherobots.com/latest/develop/storage-management/s3-storage-integration/?h=s3))
+
+We’ll start by reading the GDELT data in its raw CSV format into a Sedona DataFrame.
+
+The GDELT dataset uses tab-separated values (TSV), so we specify the tab character (\t) as the delimiter.
+
+```python
+csv_path = 's3://gdelt-open-data/events/*.*.csv'
+
+csv_df = sedona.read.format("csv") \
+    .option("delimiter", "\\t") \
+    .load(csv_path)
+```
+
+```python
+import requests
+
+# Fetch the header file from the URL
+response = requests.get('https://gdeltproject.org/data/lookups/CSV.header.dailyupdates.txt')
+response.raise_for_status()  # ensure we notice bad responses
+
+# Assume the first line contains the header names and they're tab-delimited
+header_line = response.text.splitlines()[0].strip()
+headers = header_line.split('\t')
+
+# Attach the headers
+csv_df = csv_df.toDF(*headers)
+
+csv_df.printSchema()
+```
+
+```python
+# Count the total number of rows
+csv_df.count()
+```
+
+## Creating a managed table from raw data
+
+We can now convert the DataFrame into an Iceberg table.
+
+```python
+# Create a temporary view to create our table from the DataFrame
+csv_df.createOrReplaceTempView('csv_df')
+
+name = 'gdelt'
+
+# Create a Database
+sedona.sql(f'''
+CREATE DATABASE IF NOT EXISTS org_catalog.{name}
+''')
+```
+
+```python
+# Create the table and add a point geometry column
+sedona.sql(f'''
+CREATE OR REPLACE TABLE org_catalog.{name}.gdelt AS 
+SELECT *, 
+ST_SetSRID(
+    ST_Point(ActionGeo_Long, ActionGeo_Lat),
+    4326
+) as geometry
+FROM csv_df
+LIMIT 10000
+''')
+```
+
+Here's how we did it.
+
+- The `CREATE DATABASE` command creates the `org_catalog.gdelt` database if it doesn’t already exist.
+- `CREATE OR REPLACE TABLE` makes a managed table by selecting data from the temporary view.
+- We also created a **geometry column** using the latitude and longitude fields from the CSV.
+  - We use `ST_Point` to create a point geometry from the latitude and longitude
+  - `ST_SetSRID` sets the spatial reference system to EPSG:4326 (WGS 84).
+- `LIMIT 10000` reduces the size of the data since this is a tutorial exercise and the typical GDELT daily data set has hundreds of millions of rows.
+  - Wherobots is built to scale to petabyte-sized, planetary spatial workloads. ([Docs: Runtimes](https://docs.wherobots.com/latest/develop/runtimes/))
+
+## Writing efficient GeoParquet with metadata
+
+When exporting spatial data for downstream use, the GeoParquet format offers an efficient, interoperable way to store vector data with embedded spatial metadata.
+
+GeoParquet builds on the Parquet columnar format, adding metadata for geometries, coordinate reference systems (CRS), and bounding boxes.
+
+> For more on GeoParquet, see the [GeoParquet](https://geoparquet.org/) specification
+
+## Partitioning and adding bounding boxes
+
+Before writing the data, we optimize it for efficient storage and querying:
+
+- GeoHash partitioning — We compute a GeoHash for each geometry and partition the data accordingly. This organizes the dataset spatially, improving query performance for spatial ranges.
+- Bounding box metadata — We add a bounding box for each geometry, allowing readers to perform fast spatial filtering without loading the full dataset.
+
+```python
+# Organize the table by the GeoHash for improved partitioning
+
+gdelt = sedona.sql(f'''SELECT 
+*,
+ST_GeoHash(geometry, 15) AS geohash,
+struct(st_xmin(geometry) as xmin, st_ymin(geometry) as ymin, st_xmax(geometry) as xmax, st_ymax(geometry) as ymax) as bbox
+FROM org_catalog.{name}.gdelt''')
+```
+
+## Writing the GeoParquet file
+
+We write the data using the **GeoParquet** format with key options:
+
+* `geoparquet.version` — Specifies the format version (recommended: `1.1.0`)
+* `geoparquet.covering` — Defines the spatial covering method (we use `bbox`)
+* `geoparquet.crs` — Passes the PROJJSON metadata for the CRS (optional)
+* `compression` — We apply `snappy` compression for efficient storage
+
+The data is repartitioned by `geohash` and sorted within partitions to improve downstream query performance:
+
+> This writes a partitioned, metadata-rich GeoParquet dataset ready for scalable spatial analysis.
+
+```python
+%%time
+import os
+
+user_uri = os.getenv("USER_S3_PATH")
+
+gdelt.repartitionByRange(30, "geohash") \
+    .sortWithinPartitions("geohash") \
+    .drop("geohash15") \
+    .write \
+    .format("geoparquet") \
+    .option("geoparquet.version", "1.1.0") \
+    .option("geoparquet.covering", "bbox") \
+    .save(user_uri + "gdelt-snappy", mode='overwrite', compression='snappy')
+```
