@@ -148,10 +148,12 @@ def execute_notebook(input_path: Path, output_path: Path, timeout: int) -> dict:
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Execute notebook with papermill
+        # Use kernel_name=None to let papermill use the notebook's kernel spec
+        # or fall back to the current Python environment
         pm.execute_notebook(
             str(input_path),
             str(output_path),
-            kernel_name="python3",
+            kernel_name=None,
             progress_bar=False,
             request_save_on_cell_execute=True,
             execution_timeout=timeout,

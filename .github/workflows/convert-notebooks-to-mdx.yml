@@ -128,7 +128,8 @@ jobs:
               "timeoutSeconds": 7200,
               "environment": {
                 "dependencies": [
-                  {"sourceType": "PYPI", "libraryName": "papermill", "libraryVersion": "2.6.0"}
+                  {"sourceType": "PYPI", "libraryName": "papermill", "libraryVersion": "2.6.0"},
+                  {"sourceType": "PYPI", "libraryName": "ipykernel", "libraryVersion": "6.29.5"}
                 ]
               }
             }')
@@ -302,6 +303,10 @@ jobs:
           # Count notebooks
           COUNT=$(echo "$NOTEBOOKS" | wc -w)
           echo "count=$COUNT" >> $GITHUB_OUTPUT
+
+      - name: Install dependencies
+        run: |
+          pip install nbconvert>=7.0.0
 
       - name: Create output directory
         run: mkdir -p ${{ runner.temp }}/mdx_output

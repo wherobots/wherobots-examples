@@ -3,23 +3,19 @@
 Convert Jupyter notebooks to MDX format with rendered output.
 
 This script converts .ipynb files to .mdx files suitable for Mintlify documentation,
-preserving both code and output cells in a format compatible with Mintlify's MDX parser.
+using nbconvert to render outputs properly, then adding MDX-compatible frontmatter.
+
+Requirements:
+    - nbconvert>=7.0.0
 """
 
-import json
 import re
 import sys
-import base64
 import argparse
+import subprocess
+import tempfile
 from pathlib import Path
 from typing import Optional
-
-
-def escape_mdx_text(text: str) -> str:
-    """Escape special MDX/JSX characters in plain text output."""
-    # Escape curly braces which are special in MDX/JSX
-    text = text.replace("{", "\\{").replace("}", "\\}")
-    return text
 
 
 def fix_html_void_elements(text: str) -> str:
@@ -28,180 +24,212 @@ def fix_html_void_elements(text: str) -> str:
     MDX requires all HTML tags to be properly closed. Void elements like <img>, <br>,
     <hr>, etc. must use self-closing syntax: <img /> instead of <img>.
     """
-    # List of HTML void elements that need to be self-closed
-    void_elements = ['img', 'br', 'hr', 'input', 'meta', 'link', 'area', 'base', 'col', 'embed', 'source', 'track', 'wbr']
+    void_elements = [
+        "img",
+        "br",
+        "hr",
+        "input",
+        "meta",
+        "link",
+        "area",
+        "base",
+        "col",
+        "embed",
+        "source",
+        "track",
+        "wbr",
+    ]
 
     for element in void_elements:
         # Match tags that are not already self-closed
-        # Pattern matches <element ...> but not <element ... /> or <element .../>
-        pattern = rf'<({element})\s*([^>]*?)(?<!/)\s*>'
-        replacement = rf'<\1 \2 />'
+        pattern = rf"<({element})\s*([^>]*?)(?<!/)\s*>"
+        replacement = rf"<\1 \2 />"
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
 
         # Clean up any double spaces introduced
-        text = re.sub(rf'<({element})\s+/>', rf'<\1 />', text, flags=re.IGNORECASE)
+        text = re.sub(rf"<({element})\s+/>", rf"<\1 />", text, flags=re.IGNORECASE)
 
     return text
 
 
-def process_markdown_cell(cell: dict) -> str:
-    """Process a markdown cell and return MDX-compatible content."""
-    source = "".join(cell.get("source", []))
-    # Fix HTML void elements for MDX compatibility
-    source = fix_html_void_elements(source)
-    return source + "\n\n"
+def sanitize_for_mdx(content: str) -> str:
+    """Sanitize content to be MDX-compatible.
 
+    MDX is strict about JSX syntax. This function:
+    1. Removes <script> tags (not allowed in MDX)
+    2. Removes <style> tags (not allowed in MDX)
+    3. Escapes curly braces outside of code blocks
+    4. Removes HTML comments
+    5. Removes widget output that can't be rendered statically
+    """
+    # Split content into code blocks and non-code blocks
+    # We need to preserve code blocks as-is
+    parts = re.split(r"(```[\s\S]*?```)", content)
 
-def process_code_cell(cell: dict, show_output: bool = True) -> str:
-    """Process a code cell with its outputs and return MDX-compatible content."""
-    source = "".join(cell.get("source", []))
-    outputs = cell.get("outputs", [])
+    sanitized_parts = []
+    for i, part in enumerate(parts):
+        if part.startswith("```"):
+            # This is a code block - keep as-is
+            sanitized_parts.append(part)
+        else:
+            # This is regular content - sanitize it
 
-    result = []
-
-    # Add the code block with python syntax highlighting
-    if source.strip():
-        result.append(f"```python\n{source}\n```\n")
-
-    if not show_output:
-        return "\n".join(result) + "\n"
-
-    # Process outputs
-    for output in outputs:
-        output_type = output.get("output_type", "")
-
-        if output_type == "stream":
-            # Standard output/error
-            text = "".join(output.get("text", []))
-            if text.strip():
-                result.append(
-                    f'\n<Expandable title="Output">\n```\n{text.rstrip()}\n```\n</Expandable>\n'
-                )
-
-        elif output_type == "execute_result" or output_type == "display_data":
-            data = output.get("data", {})
-
-            # Handle different mime types in order of preference
-            if "image/png" in data:
-                # Embed base64 image using Mintlify's Frame component
-                img_data = data["image/png"]
-                result.append(
-                    f'\n<Frame>\n  <img src="data:image/png;base64,{img_data}" alt="Output" />\n</Frame>\n'
-                )
-
-            elif "image/jpeg" in data:
-                img_data = data["image/jpeg"]
-                result.append(
-                    f'\n<Frame>\n  <img src="data:image/jpeg;base64,{img_data}" alt="Output" />\n</Frame>\n'
-                )
-
-            elif "image/svg+xml" in data:
-                svg_data = "".join(data["image/svg+xml"])
-                result.append(f"\n<Frame>\n{svg_data}\n</Frame>\n")
-
-            elif "text/html" in data:
-                html_content = "".join(data["text/html"])
-                # For HTML tables and other output, wrap in expandable
-                if "<table" in html_content.lower():
-                    result.append(
-                        f'\n<Expandable title="Table Output">\n```html\n{html_content}\n```\n</Expandable>\n'
-                    )
-                else:
-                    result.append(
-                        f'\n<Expandable title="HTML Output">\n```html\n{html_content}\n```\n</Expandable>\n'
-                    )
-
-            elif "text/plain" in data:
-                text = "".join(data["text/plain"])
-                if text.strip():
-                    result.append(
-                        f'\n<Expandable title="Output">\n```\n{text.rstrip()}\n```\n</Expandable>\n'
-                    )
-
-        elif output_type == "error":
-            # Error output
-            ename = output.get("ename", "Error")
-            traceback = output.get("traceback", [])
-
-            # Clean ANSI codes from traceback
-            tb_text = "\n".join(traceback)
-            tb_text = re.sub(r"\x1b\[[0-9;]*m", "", tb_text)
-
-            result.append(
-                f'\n<Expandable title="Error: {ename}">\n```\n{tb_text}\n```\n</Expandable>\n'
+            # Remove <script>...</script> blocks (including multiline)
+            part = re.sub(
+                r"<script[^>]*>[\s\S]*?</script>", "", part, flags=re.IGNORECASE
             )
 
-    return "\n".join(result) + "\n"
+            # Remove <style>...</style> blocks (including multiline)
+            part = re.sub(
+                r"<style[^>]*>[\s\S]*?</style>", "", part, flags=re.IGNORECASE
+            )
+
+            # Remove HTML comments
+            part = re.sub(r"<!--[\s\S]*?-->", "", part)
+
+            # Remove div tags with data attributes (widget containers)
+            part = re.sub(
+                r"<div[^>]*data-[^>]*>[\s\S]*?</div>", "", part, flags=re.IGNORECASE
+            )
+
+            # Remove empty div tags
+            part = re.sub(r"<div[^>]*>\s*</div>", "", part, flags=re.IGNORECASE)
+
+            # Remove FloatProgress and other widget text output
+            part = re.sub(r"FloatProgress\([^)]*\)", "[Progress indicator]", part)
+            part = re.sub(r"HBox\([^)]*\)", "[Widget]", part)
+            part = re.sub(r"VBox\([^)]*\)", "[Widget]", part)
+
+            # Escape curly braces (JSX interprets them as expressions)
+            # But be careful not to double-escape
+            part = part.replace("{", "\\{").replace("}", "\\}")
+
+            # Clean up multiple blank lines
+            part = re.sub(r"\n{3,}", "\n\n", part)
+
+            sanitized_parts.append(part)
+
+    return "".join(sanitized_parts)
 
 
-def extract_description(cells: list) -> str:
-    """Extract a description from the notebook's first markdown cell after the title."""
-    found_title = False
-    for cell in cells:
-        if cell.get("cell_type") == "markdown":
-            source = "".join(cell.get("source", []))
-            lines = source.strip().split("\n")
-
-            for line in lines:
-                line = line.strip()
-                # Skip the title line
-                if line.startswith("# ") and not found_title:
-                    found_title = True
-                    continue
-                # Skip empty lines, headings, and HTML tags (like <img>)
-                if not line or line.startswith("#") or line.startswith("<"):
-                    continue
-                # Return first valid text line as description
-                # Clean up the line for use as description
-                desc = line.strip()
-                # Remove markdown formatting
-                desc = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", desc)  # Links
-                desc = re.sub(r"\*\*([^*]+)\*\*", r"\1", desc)  # Bold
-                desc = re.sub(r"\*([^*]+)\*", r"\1", desc)  # Italic
-                desc = re.sub(r"`([^`]+)`", r"\1", desc)  # Code
-                # Skip if only HTML remains after cleaning
-                if desc.startswith("<") or not desc:
-                    continue
-                # Truncate if too long
-                if len(desc) > 160:
-                    desc = desc[:157] + "..."
-                return desc
-    return ""
+def extract_title(content: str) -> str:
+    """Extract title from first H1 heading."""
+    match = re.search(r"^#\s+(.+)$", content, re.MULTILINE)
+    if match:
+        return match.group(1).strip()
+    return "Untitled"
 
 
-def generate_frontmatter(
-    notebook_path: Path, notebook: dict, category: Optional[str] = None
-) -> str:
-    """Generate Mintlify-compatible MDX frontmatter from notebook metadata."""
-    cells = notebook.get("cells", [])
+def extract_description(content: str) -> str:
+    """Extract first meaningful paragraph after H1 as description."""
+    # Find position of first H1
+    h1_match = re.search(r"^#\s+.+$", content, re.MULTILINE)
+    if not h1_match:
+        return ""
 
-    # Try to extract title from first markdown cell or use filename
-    title = notebook_path.stem.replace("_", " ").replace("-", " ")
+    # Get content after H1
+    after_h1 = content[h1_match.end() :]
 
-    for cell in cells:
-        if cell.get("cell_type") == "markdown":
-            source = "".join(cell.get("source", []))
-            # Look for H1 heading
-            match = re.match(r"^#\s+(.+)$", source, re.MULTILINE)
-            if match:
-                title = match.group(1).strip()
+    # Find first non-empty, non-header, non-code paragraph
+    lines = after_h1.split("\n")
+    paragraph = []
+
+    for line in lines:
+        line_stripped = line.strip()
+        # Skip empty lines before we start collecting
+        if not line_stripped and not paragraph:
+            continue
+        # Stop at empty line if we have content
+        if not line_stripped and paragraph:
+            break
+        # Skip headings, HTML, code blocks
+        if (
+            line_stripped.startswith("#")
+            or line_stripped.startswith("<")
+            or line_stripped.startswith("```")
+        ):
+            if paragraph:
                 break
+            continue
 
-    # Extract description
-    description = extract_description(cells)
+        paragraph.append(line_stripped)
+        if len(" ".join(paragraph)) > 200:
+            break
 
-    # Build frontmatter
-    frontmatter_lines = [
-        "---",
-        f'title: "{title}"',
+    desc = " ".join(paragraph)
+    # Remove markdown links for cleaner description
+    desc = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", desc)
+    # Remove HTML sup tags
+    desc = re.sub(r"<sup>\d+</sup>", "", desc)
+    # Remove other HTML tags
+    desc = re.sub(r"<[^>]+>", "", desc)
+    # Truncate
+    if len(desc) > 160:
+        desc = desc[:157] + "..."
+    return desc
+
+
+def run_nbconvert(notebook_path: Path, output_dir: Path) -> Path:
+    """Run nbconvert to convert notebook to markdown.
+
+    Args:
+        notebook_path: Path to the input notebook
+        output_dir: Directory for the markdown output
+
+    Returns:
+        Path to the generated markdown file
+    """
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    cmd = [
+        sys.executable,
+        "-m",
+        "nbconvert",
+        "--to",
+        "markdown",
+        "--output-dir",
+        str(output_dir),
+        str(notebook_path),
     ]
 
-    if description:
-        # Escape quotes in description
-        description = description.replace('"', '\\"')
-        frontmatter_lines.append(f'description: "{description}"')
+    result = subprocess.run(cmd, capture_output=True, text=True)
 
-    # Add icon based on category
+    if result.returncode != 0:
+        raise RuntimeError(f"nbconvert failed: {result.stderr}")
+
+    # Return path to generated markdown file
+    return output_dir / f"{notebook_path.stem}.md"
+
+
+def convert_markdown_to_mdx(
+    markdown_path: Path, output_path: Path, category: Optional[str] = None
+) -> None:
+    """Convert nbconvert markdown output to MDX with frontmatter.
+
+    Args:
+        markdown_path: Path to the markdown file from nbconvert
+        output_path: Path for the output MDX file
+        category: Category for icon selection
+    """
+    content = markdown_path.read_text(encoding="utf-8")
+
+    # Remove papermill error message at the top (if present)
+    content = re.sub(r'^<span style="color:red.*?</span>\s*\n*', "", content)
+
+    # Sanitize content for MDX compatibility (remove scripts, styles, escape braces)
+    content = sanitize_for_mdx(content)
+
+    # Fix HTML void elements for MDX
+    content = fix_html_void_elements(content)
+
+    # Extract metadata before modifying content
+    title = extract_title(content)
+    description = extract_description(content)
+
+    # Remove just the H1 line (keep content after it)
+    content = re.sub(r"^#\s+.+\n+", "", content, count=1, flags=re.MULTILINE)
+
+    # Build frontmatter
     icon_map = {
         "Getting_Started": "rocket",
         "Analyzing_Data": "chart-line",
@@ -210,51 +238,59 @@ def generate_frontmatter(
         "Foreign_Catalogs": "folder-tree",
         "scala": "code",
     }
+    icon = icon_map.get(category, "book") if category else "book"
 
-    if category and category in icon_map:
-        frontmatter_lines.append(f'icon: "{icon_map[category]}"')
+    # Escape quotes in description
+    description_escaped = description.replace('"', '\\"')
 
-    frontmatter_lines.append("---")
-    frontmatter_lines.append("")
+    frontmatter = f'''---
+title: "{title}"
+description: "{description_escaped}"
+icon: "{icon}"
+---
 
-    return "\n".join(frontmatter_lines) + "\n"
+'''
+
+    # Write output
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(frontmatter + content, encoding="utf-8")
 
 
 def convert_notebook_to_mdx(
-    notebook_path: Path, show_output: bool = True, category: Optional[str] = None
-) -> str:
-    """Convert a Jupyter notebook to Mintlify MDX format."""
-    with open(notebook_path, "r", encoding="utf-8") as f:
-        notebook = json.load(f)
+    notebook_path: Path,
+    output_dir: Path,
+    category: Optional[str] = None,
+    verbose: bool = False,
+) -> Path:
+    """Convert a Jupyter notebook to Mintlify MDX format using nbconvert.
 
-    mdx_content = []
+    Args:
+        notebook_path: Path to the input notebook
+        output_dir: Directory for the output MDX file
+        category: Category for icon selection
+        verbose: Print progress information
 
-    # Add frontmatter
-    mdx_content.append(generate_frontmatter(notebook_path, notebook, category))
+    Returns:
+        Path to the generated MDX file
+    """
+    # Create a temporary directory for nbconvert output
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
 
-    cells = notebook.get("cells", [])
-    skip_first_h1 = True  # Skip first H1 since it's in frontmatter
+        if verbose:
+            print(f"Running nbconvert on {notebook_path.name}...")
 
-    for cell in cells:
-        cell_type = cell.get("cell_type", "")
+        # Run nbconvert to get markdown
+        markdown_path = run_nbconvert(notebook_path, temp_path)
 
-        if cell_type == "markdown":
-            content = process_markdown_cell(cell)
+        if verbose:
+            print(f"Converting markdown to MDX...")
 
-            # Skip the first H1 heading since it's used as the title
-            if skip_first_h1 and re.match(r"^#\s+", content):
-                skip_first_h1 = False
-                # Remove just the first H1 line
-                content = re.sub(r"^#\s+.+\n*", "", content, count=1)
-                if content.strip():
-                    mdx_content.append(content)
-            else:
-                mdx_content.append(content)
+        # Convert markdown to MDX
+        output_path = output_dir / f"{notebook_path.stem}.mdx"
+        convert_markdown_to_mdx(markdown_path, output_path, category)
 
-        elif cell_type == "code":
-            mdx_content.append(process_code_cell(cell, show_output))
-
-    return "".join(mdx_content)
+        return output_path
 
 
 def should_exclude_notebook(notebook_path: Path) -> bool:
@@ -269,7 +305,7 @@ def should_exclude_notebook(notebook_path: Path) -> bool:
 
 
 def convert_all_notebooks(
-    source_dir: Path, output_dir: Path, show_output: bool = True, verbose: bool = False
+    source_dir: Path, output_dir: Path, verbose: bool = False
 ) -> tuple:
     """Convert all notebooks in source directory to MDX files."""
     converted = []
@@ -286,17 +322,14 @@ def convert_all_notebooks(
         rel_path = notebook_path.relative_to(source_dir)
         category = rel_path.parts[0] if len(rel_path.parts) > 1 else None
 
-        # Create output subdirectory
+        # Create output subdirectory matching source structure
         output_subdir = output_dir / rel_path.parent
         output_subdir.mkdir(parents=True, exist_ok=True)
 
         try:
-            mdx_content = convert_notebook_to_mdx(notebook_path, show_output, category)
-            output_path = output_subdir / f"{notebook_path.stem}.mdx"
-
-            with open(output_path, "w", encoding="utf-8") as f:
-                f.write(mdx_content)
-
+            output_path = convert_notebook_to_mdx(
+                notebook_path, output_subdir, category, verbose
+            )
             converted.append((notebook_path, output_path))
             if verbose:
                 print(f"Converted: {notebook_path} -> {output_path}")
@@ -317,9 +350,6 @@ def main():
     )
     parser.add_argument("output", type=Path, help="Output directory for MDX files")
     parser.add_argument(
-        "--no-output", action="store_true", help="Exclude cell outputs from conversion"
-    )
-    parser.add_argument(
         "--verbose",
         "-v",
         action="store_true",
@@ -335,7 +365,6 @@ def main():
 
     input_path = args.input
     output_dir = args.output
-    show_output = not args.no_output
 
     if not input_path.exists():
         print(f"Error: Input path does not exist: {input_path}", file=sys.stderr)
@@ -347,17 +376,10 @@ def main():
             print(f"Skipping excluded notebook: {input_path.name}")
             sys.exit(0)
 
-        output_dir.mkdir(parents=True, exist_ok=True)
-
         try:
-            mdx_content = convert_notebook_to_mdx(
-                input_path, show_output, args.category
+            output_path = convert_notebook_to_mdx(
+                input_path, output_dir, args.category, args.verbose
             )
-            output_path = output_dir / f"{input_path.stem}.mdx"
-
-            with open(output_path, "w", encoding="utf-8") as f:
-                f.write(mdx_content)
-
             print(f"Converted: {input_path} -> {output_path}")
 
         except Exception as e:
@@ -366,9 +388,7 @@ def main():
 
     else:
         # Directory conversion
-        converted, skipped = convert_all_notebooks(
-            input_path, output_dir, show_output, args.verbose
-        )
+        converted, skipped = convert_all_notebooks(input_path, output_dir, args.verbose)
 
         print(f"\nConversion complete:")
         print(f"  Converted: {len(converted)} notebooks")
