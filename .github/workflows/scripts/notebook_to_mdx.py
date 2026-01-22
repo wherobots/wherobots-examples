@@ -3,12 +3,14 @@
 Convert Jupyter notebooks to MDX format for Mintlify documentation.
 
 This script converts .ipynb files to .mdx files, extracting only the source code
-and markdown content (no execution outputs). It generates MDX-compatible frontmatter
-and sanitizes content for JSX compatibility.
+and markdown content (no execution outputs). It generates MDX-compatible frontmatter,
+sanitizes content for JSX compatibility, and copies images to the output directory.
 """
 
+import base64
 import json
 import re
+import shutil
 import sys
 import argparse
 from pathlib import Path
@@ -87,6 +89,102 @@ def sanitize_markdown_for_mdx(text: str) -> str:
     return text
 
 
+def process_images(
+    source: str,
+    cell: dict,
+    notebook_path: Path,
+    images_dir: Path,
+    notebook_slug: str,
+    verbose: bool = False,
+) -> str:
+    """Process images in markdown content.
+
+    Handles two types of images:
+    1. Local file references (./assets/img/...) - copies to images_dir
+    2. Embedded attachments (attachment:...) - extracts and saves to images_dir
+
+    Returns updated markdown with corrected image paths.
+    """
+    # Create images directory if needed
+    images_dir.mkdir(parents=True, exist_ok=True)
+
+    # Get attachments from cell
+    attachments = cell.get("attachments", {})
+
+    def replace_image(match: re.Match) -> str:
+        alt_text = match.group(1)
+        image_path = match.group(2)
+
+        # Handle embedded attachments
+        if image_path.startswith("attachment:"):
+            attachment_name = image_path.replace("attachment:", "")
+            if attachment_name in attachments:
+                attachment_data = attachments[attachment_name]
+                # Get the first mime type (usually image/png or image/jpeg)
+                for mime_type, base64_data in attachment_data.items():
+                    # Determine extension from mime type
+                    ext = mime_type.split("/")[-1]
+                    if ext == "jpeg":
+                        ext = "jpg"
+
+                    # Create a unique filename
+                    safe_name = re.sub(
+                        r"[^a-zA-Z0-9]", "-", attachment_name.split(".")[0]
+                    )
+                    new_filename = f"{notebook_slug}-{safe_name}.{ext}"
+                    new_path = images_dir / new_filename
+
+                    # Decode and save
+                    image_bytes = base64.b64decode(base64_data)
+                    with open(new_path, "wb") as f:
+                        f.write(image_bytes)
+
+                    if verbose:
+                        print(f"    Extracted attachment: {new_filename}")
+
+                    # Return updated markdown with relative path
+                    return f"![{alt_text}](/tutorials/example-notebooks/images/{new_filename})"
+
+            # Attachment not found, return as-is
+            return match.group(0)
+
+        # Handle local file references
+        # Normalize path (handle ./ and ../)
+        if image_path.startswith("./"):
+            image_path = image_path[2:]
+
+        # Resolve the image path relative to the notebook
+        if image_path.startswith("../"):
+            # Go up from notebook directory
+            source_image = notebook_path.parent.parent / image_path[3:]
+        else:
+            source_image = notebook_path.parent / image_path
+
+        if source_image.exists():
+            # Create a unique filename to avoid collisions
+            new_filename = f"{notebook_slug}-{source_image.name}"
+            new_path = images_dir / new_filename
+
+            # Copy the image
+            shutil.copy2(source_image, new_path)
+
+            if verbose:
+                print(f"    Copied image: {new_filename}")
+
+            # Return updated markdown with absolute path from docs root
+            return f"![{alt_text}](/tutorials/example-notebooks/images/{new_filename})"
+        else:
+            if verbose:
+                print(f"    Warning: Image not found: {source_image}")
+            # Return original if image not found
+            return match.group(0)
+
+    # Match markdown image syntax: ![alt](path)
+    updated_source = re.sub(r"!\[([^\]]*)\]\(([^)]+)\)", replace_image, source)
+
+    return updated_source
+
+
 def convert_notebook_to_mdx(
     notebook_path: Path, output_dir: Path, verbose: bool = False
 ) -> Optional[Path]:
@@ -102,6 +200,12 @@ def convert_notebook_to_mdx(
     if not cells:
         print(f"Warning: {notebook_path} has no cells, skipping")
         return None
+
+    # Generate notebook slug for unique image names
+    notebook_slug = notebook_path.stem.replace("_", "-").lower()
+
+    # Images directory
+    images_dir = output_dir / "images"
 
     # Extract metadata
     title = extract_title_from_markdown(cells)
@@ -131,6 +235,11 @@ def convert_notebook_to_mdx(
             continue
 
         if cell_type == "markdown":
+            # Process images first (before sanitization)
+            source = process_images(
+                source, cell, notebook_path, images_dir, notebook_slug, verbose
+            )
+
             # Check if this cell contains the first H1 we should skip
             if skip_first_h1 and re.search(r"^#\s+", source, re.MULTILINE):
                 # Remove the H1 line but keep rest of cell
