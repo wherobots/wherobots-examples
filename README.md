@@ -55,35 +55,6 @@ command and it will pass as the pre-commit hooks will fix the issues it finds.
 |   |-- Map_Tile_Generation.ipynb
 |   |-- STAC_Reader.ipynb
 |   `-- Unity_Catalog_Delta_Tables.ipynb
-|-- docs
-|   |-- mint.json
-|   `-- notebooks
-|       |-- Clustering-DBSCAN.mdx
-|       |-- ESA-WorldCover.mdx
-|       |-- Foursquare-Places.mdx
-|       |-- GPS-Map-Matching.mdx
-|       |-- Getis-Ord-Gi*.mdx
-|       |-- Getting-Started.mdx
-|       |-- Isochrones.mdx
-|       |-- K-Nearest-Neighbor-Join.mdx
-|       |-- Loading-Common-Spatial-File-Types.mdx
-|       |-- Local-Outlier-Factor.mdx
-|       |-- Map-Tile-Generation.mdx
-|       |-- NOAA-SWDI.mdx
-|       |-- Overture-Maps.mdx
-|       |-- PMTiles-railroad.mdx
-|       |-- Part-1-Loading-Data.mdx
-|       |-- Part-2-Reading-Spatial-Files.mdx
-|       |-- Part-3-Accelerating-Geospatial-Datasets.mdx
-|       |-- Part-4-Spatial-Joins.mdx
-|       |-- RasterFlow-Bring-Your-Own-Model.mdx
-|       |-- RasterFlow-CHM.mdx
-|       |-- RasterFlow-Chesapeake.mdx
-|       |-- RasterFlow-FTW.mdx
-|       |-- RasterFlow-Tile2Net.mdx
-|       |-- STAC-Reader.mdx
-|       |-- Unity-Catalog-Delta-Tables.mdx
-|       `-- Zonal-Stats-ESAWorldCover-Texas.mdx
 `-- scala
     |-- Getting_Started.ipynb
     `-- packaging-example-project

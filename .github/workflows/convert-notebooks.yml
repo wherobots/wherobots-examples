@@ -8,93 +8,66 @@ on:
       - '**/*.ipynb'
       - '.github/workflows/convert-notebooks.yml'
       - '.github/workflows/scripts/notebook_to_mdx.py'
-  pull_request:
-    paths:
-      - '**/*.ipynb'
   workflow_dispatch:
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
-  convert:
+  convert-and-push:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout wherobots-examples
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          path: wherobots-examples
+
+      - name: Checkout wherobots/docs
+        uses: actions/checkout@v4
+        with:
+          repository: wherobots/docs
+          token: ${{ secrets.DOCS_REPO_TOKEN }}
+          path: docs
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Get changed notebooks
-        id: changed-files
-        uses: tj-actions/changed-files@v44
-        with:
-          files: |
-            **/*.ipynb
-          files_ignore: |
-            **/Raster_Inference*.ipynb
-
       - name: Convert notebooks to MDX
-        if: steps.changed-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
         run: |
-          # If workflow_dispatch or no specific changes detected, convert all
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ -z "${{ steps.changed-files.outputs.all_changed_files }}" ]; then
-            echo "Converting all notebooks..."
-            python .github/workflows/scripts/notebook_to_mdx.py \
-              Getting_Started/ \
-              Analyzing_Data/ \
-              Reading_and_Writing_Data/ \
-              Open_Data_Connections/ \
-              scala/ \
-              -o docs/notebooks \
-              --exclude-prefix Raster_Inference \
-              -v
-          else
-            echo "Converting changed notebooks..."
-            python .github/workflows/scripts/notebook_to_mdx.py \
-              ${{ steps.changed-files.outputs.all_changed_files }} \
-              -o docs/notebooks \
-              --exclude-prefix Raster_Inference \
-              -v
-          fi
+          python wherobots-examples/.github/workflows/scripts/notebook_to_mdx.py \
+            wherobots-examples/Getting_Started/ \
+            wherobots-examples/Analyzing_Data/ \
+            wherobots-examples/Reading_and_Writing_Data/ \
+            wherobots-examples/Open_Data_Connections/ \
+            wherobots-examples/scala/ \
+            -o docs/tutorials/example-notebooks \
+            --exclude-prefix Raster_Inference \
+            -v
 
-      - name: Update mint.json navigation
-        if: steps.changed-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
+      - name: Update docs.json navigation
         run: |
-          python .github/workflows/scripts/update_mint_navigation.py
+          python wherobots-examples/.github/workflows/scripts/update_docs_navigation.py \
+            --docs-json docs/docs.json \
+            --notebooks-dir docs/tutorials/example-notebooks
 
-      - name: Check for changes
+      - name: Check for changes in docs repo
         id: git-check
+        working-directory: docs
         run: |
-          git add docs/
+          git add tutorials/example-notebooks/ docs.json
           if git diff --staged --quiet; then
             echo "changes=false" >> $GITHUB_OUTPUT
           else
             echo "changes=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Commit and push changes
-        if: steps.git-check.outputs.changes == 'true' && github.event_name == 'push'
+      - name: Commit and push to docs repo
+        if: steps.git-check.outputs.changes == 'true'
+        working-directory: docs
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git commit -m "docs: update MDX files from notebooks"
+          git commit -m "docs: sync example notebooks from wherobots-examples"
           git push
-
-      - name: Create PR comment
-        if: steps.git-check.outputs.changes == 'true' && github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '📚 **Notebook changes detected!**\n\nMDX documentation files will be updated when this PR is merged.'
-            })
