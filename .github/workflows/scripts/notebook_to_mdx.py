@@ -186,6 +186,50 @@ def process_images(
     # Match markdown image syntax: ![alt](path)
     updated_source = re.sub(r"!\[([^\]]*)\]\(([^)]+)\)", replace_image, source)
 
+    # Also handle HTML <img> tags
+    def replace_html_img(match: re.Match) -> str:
+        full_tag = match.group(0)
+        src_match = re.search(r'src=["\']([^"\']+)["\']', full_tag)
+        if not src_match:
+            return full_tag
+
+        image_path = src_match.group(1)
+
+        # Skip header-logo images
+        if "header-logo" in image_path:
+            return ""
+
+        # Normalize path
+        if image_path.startswith("./"):
+            image_path = image_path[2:]
+
+        # Resolve the image path relative to the notebook
+        if image_path.startswith("../"):
+            source_image = notebook_path.parent.parent / image_path[3:]
+        else:
+            source_image = notebook_path.parent / image_path
+
+        if source_image.exists():
+            new_filename = f"{notebook_slug}-{source_image.name}"
+            new_path = images_dir / new_filename
+
+            shutil.copy2(source_image, new_path)
+
+            if verbose:
+                print(f"    Copied image: {new_filename}")
+
+            # Convert to markdown image syntax for MDX compatibility
+            alt_match = re.search(r'alt=["\']([^"\']*)["\']', full_tag)
+            alt_text = alt_match.group(1) if alt_match else ""
+            return f"![{alt_text}](/tutorials/example-notebooks/images/{new_filename})"
+        else:
+            if verbose:
+                print(f"    Warning: Image not found: {source_image}")
+            return full_tag
+
+    # Match HTML img tags
+    updated_source = re.sub(r"<img\s+[^>]*>", replace_html_img, updated_source)
+
     return updated_source
 
 
