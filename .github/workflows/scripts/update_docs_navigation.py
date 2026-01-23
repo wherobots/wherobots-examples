@@ -43,6 +43,11 @@ CATEGORY_ORDER = [
     "Scala",
 ]
 
+# Categories that should be hidden in navigation
+HIDDEN_CATEGORIES = [
+    "RasterFlow",
+]
+
 
 def get_category(filename: str) -> str:
     """Determine category for a notebook based on filename."""
@@ -82,7 +87,11 @@ def build_notebook_navigation(notebooks_dir: Path) -> list:
     for category in CATEGORY_ORDER:
         pages = categories.get(category, [])
         if pages:
-            notebook_groups.append({"group": category, "pages": sorted(pages)})
+            group = {"group": category, "pages": sorted(pages)}
+            # Mark hidden categories
+            if category in HIDDEN_CATEGORIES:
+                group["hidden"] = True
+            notebook_groups.append(group)
 
     # Add "Other" if it has pages
     if categories.get("Other"):
