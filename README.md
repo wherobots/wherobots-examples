@@ -29,6 +29,7 @@ will pass as the pre-commit hooks will fix the issues it finds.
 |   |-- Local_Outlier_Factor.ipynb
 |   |-- PMTiles-railroad.ipynb
 |   |-- RasterFlow_Bring_Your_Own_Model.ipynb
+|   |-- RasterFlow_Bring_Your_Own_Rasters_NAIP.ipynb
 |   |-- RasterFlow_CHM.ipynb
 |   |-- RasterFlow_Chesapeake.ipynb
 |   |-- RasterFlow_FTW.ipynb
