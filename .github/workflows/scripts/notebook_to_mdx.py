@@ -59,6 +59,25 @@ def extract_description_from_markdown(cells: list) -> str:
     return ""
 
 
+def remove_table_of_contents(text: str) -> str:
+    """Remove Table of Contents sections from markdown.
+
+    Mintlify automatically generates a TOC, so we don't need manual ones.
+    Matches patterns like:
+    - ## Table of Contents followed by numbered/bulleted list items with links
+    """
+    # Pattern: "## Table of Contents" followed by list items until next heading or ---
+    # This handles numbered lists like "1. [Section](#section)"
+    pattern = r"## Table of Contents\n+(?:(?:\d+\.\s*\[[^\]]+\]\([^)]+\)\n*)+)"
+    text = re.sub(pattern, "", text)
+
+    # Also handle bullet point TOCs
+    pattern = r"## Table of Contents\n+(?:(?:-\s*\[[^\]]+\]\([^)]+\)\n*)+)"
+    text = re.sub(pattern, "", text)
+
+    return text
+
+
 def sanitize_markdown_for_mdx(text: str) -> str:
     """Sanitize markdown content for MDX/JSX compatibility."""
     # Fix HTML void elements to be self-closing
@@ -298,6 +317,7 @@ def convert_notebook_to_mdx(
                 source = "\n".join(filtered_lines)
 
             # Sanitize and add markdown
+            source = remove_table_of_contents(source)
             sanitized = sanitize_markdown_for_mdx(source)
             if sanitized.strip():
                 mdx_parts.append(sanitized)
