@@ -294,6 +294,20 @@ def convert_notebook_to_mdx(
     mdx_parts.append("---")
     mdx_parts.append("")
 
+    # Add Tip callout about running the notebook interactively
+    mdx_parts.append("<Tip>")
+    mdx_parts.append(
+        "This is just a markdown version of a Jupyter notebook. To run this notebook interactively:"
+    )
+    mdx_parts.append("")
+    mdx_parts.append(
+        "1. Go to the [Wherobots Model Hub](https://www.wherobots.com/model-hub)."
+    )
+    mdx_parts.append("2. Select the model you wish to use.")
+    mdx_parts.append('3. Click the "Run Model in Notebook" button.')
+    mdx_parts.append("</Tip>")
+    mdx_parts.append("")
+
     # Process cells
     skip_first_h1 = True  # Skip first H1 since it's in frontmatter
 
