@@ -301,10 +301,10 @@ def convert_notebook_to_mdx(
     )
     mdx_parts.append("")
     mdx_parts.append(
-        "1. Go to the [Wherobots Model Hub](https://www.wherobots.com/model-hub)."
+        "1. Go to the [**Wherobots Model Hub**](https://www.wherobots.com/model-hub)."
     )
     mdx_parts.append("2. Select the model you wish to use.")
-    mdx_parts.append('3. Click the "Run Model in Notebook" button.')
+    mdx_parts.append("3. Click the **Run Model in Notebook** button.")
     mdx_parts.append("</Tip>")
     mdx_parts.append("")
 
