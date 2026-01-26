@@ -45,6 +45,7 @@ command and it will pass as the pre-commit hooks will fix the issues it finds.
 |   |-- Part_2_Reading_Spatial_Files.ipynb
 |   |-- Part_3_Accelerating_Geospatial_Datasets.ipynb
 |   `-- Part_4_Spatial_Joins.ipynb
+|-- Makefile
 |-- Open_Data_Connections
 |   |-- ESA_WorldCover.ipynb
 |   |-- Foursquare_Places.ipynb

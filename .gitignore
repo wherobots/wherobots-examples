@@ -11,3 +11,4 @@ _deprecated
 
 # Mintlify preview directory
 .preview/
+.venv/
