@@ -42,7 +42,7 @@ update-nav:
 		--docs-json $(DOCS_JSON) \
 		--notebooks-dir $(NOTEBOOKS_OUTPUT_DIR)
 
-preview:
+preview: convert update-nav
 	@echo "Starting Mintlify dev server..."
 	@echo "Open http://localhost:3000 in your browser"
 	cd $(DOCS_DIR) && mintlify dev

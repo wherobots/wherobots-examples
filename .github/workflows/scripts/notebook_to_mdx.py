@@ -297,14 +297,40 @@ def convert_notebook_to_mdx(
     # Add Tip callout about running the notebook interactively
     mdx_parts.append("<Tip>")
     mdx_parts.append(
-        "The following content is a read-only preview of an executable Jupyter notebook. To run this notebook interactively:"
+        "The following content is a read-only preview of an executable Jupyter notebook."
     )
     mdx_parts.append("")
-    mdx_parts.append(
-        "1. Go to the [**Wherobots Model Hub**](https://www.wherobots.com/model-hub)."
-    )
-    mdx_parts.append("2. Select the specific notebook you wish to run.")
-    mdx_parts.append("3. Click **Run Model in Notebook**.")
+    mdx_parts.append("To run this notebook interactively:")
+    mdx_parts.append("")
+
+    # Check if this is a RasterFlow notebook (Model Hub) or regular notebook (Wherobots Cloud)
+    notebook_name = notebook_path.name
+    is_rasterflow = notebook_name.startswith(
+        "Raster_Inference"
+    ) or notebook_name.startswith("RasterFlow")
+
+    if is_rasterflow:
+        mdx_parts.append(
+            "1. Go to the [**Wherobots Model Hub**](https://www.wherobots.com/model-hub)."
+        )
+        mdx_parts.append("2. Select the specific notebook you wish to run.")
+        mdx_parts.append("3. Click **Run Model in Notebook**.")
+    else:
+        # Build the notebook path as it appears in wherobots-examples
+        # e.g., examples/Analyzing_Data/Object_Detection.ipynb
+        relative_path = notebook_path.relative_to(notebook_path.parent.parent)
+        examples_path = f"examples/{relative_path}"
+
+        mdx_parts.append("1. Go to [**Wherobots Cloud**](https://cloud.wherobots.com).")
+        mdx_parts.append("2. Start a runtime.")
+        mdx_parts.append("3. Open the notebook.")
+        mdx_parts.append("4. In the Jupyter Launcher:")
+        mdx_parts.append("    1. Click **File > Open Path**.")
+        mdx_parts.append(
+            f"    2. Paste the following path to access this notebook: `{examples_path}`"
+        )
+        mdx_parts.append("    3. Click **Enter**.")
+
     mdx_parts.append("</Tip>")
     mdx_parts.append("")
 
@@ -366,6 +392,9 @@ def convert_notebook_to_mdx(
 
     if verbose:
         print(f"  -> {output_path}")
+        # Print the localhost URL for easy access during preview
+        page_slug = output_path.stem  # filename without .mdx extension
+        print(f"     http://localhost:3000/tutorials/example-notebooks/{page_slug}")
 
     return output_path
 
