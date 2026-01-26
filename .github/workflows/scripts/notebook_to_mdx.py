@@ -297,14 +297,14 @@ def convert_notebook_to_mdx(
     # Add Tip callout about running the notebook interactively
     mdx_parts.append("<Tip>")
     mdx_parts.append(
-        "This is just a markdown version of a Jupyter notebook. To run this notebook interactively:"
+        "The following content is a read-only preview of an executable Jupyter notebook. To run this notebook interactively:"
     )
     mdx_parts.append("")
     mdx_parts.append(
         "1. Go to the [**Wherobots Model Hub**](https://www.wherobots.com/model-hub)."
     )
-    mdx_parts.append("2. Select the model you wish to use.")
-    mdx_parts.append("3. Click the **Run Model in Notebook** button.")
+    mdx_parts.append("2. Select the specific notebook you wish to run.")
+    mdx_parts.append("3. Click **Run Model in Notebook**.")
     mdx_parts.append("</Tip>")
     mdx_parts.append("")
 
