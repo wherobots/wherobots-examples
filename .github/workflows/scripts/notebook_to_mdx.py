@@ -277,6 +277,14 @@ def convert_notebook_to_mdx(
     # Extract metadata
     title = extract_title_from_markdown(cells)
 
+    # Get programming language from notebook metadata
+    metadata = notebook.get("metadata", {})
+    language = (
+        metadata.get("language_info", {}).get("name")
+        or metadata.get("kernelspec", {}).get("language")
+        or "python"  # Default to python
+    )
+
     # Build MDX content
     mdx_parts = []
 
@@ -324,8 +332,8 @@ def convert_notebook_to_mdx(
                 mdx_parts.append("")
 
         elif cell_type == "code":
-            # Add code block with python syntax highlighting
-            mdx_parts.append("```python")
+            # Add code block with appropriate syntax highlighting
+            mdx_parts.append(f"```{language}")
             mdx_parts.append(source)
             mdx_parts.append("```")
             mdx_parts.append("")
