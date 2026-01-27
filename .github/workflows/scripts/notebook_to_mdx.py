@@ -103,9 +103,29 @@ def sanitize_markdown_for_mdx(text: str) -> str:
         text = re.sub(rf"<({element})\s+/>", rf"<\1 />", text, flags=re.IGNORECASE)
 
     # Escape curly braces (JSX interprets them as expressions)
-    text = text.replace("{", "\\{").replace("}", "\\}")
+    # But preserve curly braces inside code blocks (fenced and inline)
 
-    return text
+    # Split by fenced code blocks first (```...```)
+    parts = re.split(r"(```[\s\S]*?```)", text)
+    result_parts = []
+
+    for i, part in enumerate(parts):
+        if part.startswith("```") and part.endswith("```"):
+            # This is a fenced code block, don't escape
+            result_parts.append(part)
+        else:
+            # For non-code-block parts, preserve inline code (`...`)
+            inline_parts = re.split(r"(`[^`]+`)", part)
+            for j, inline_part in enumerate(inline_parts):
+                if inline_part.startswith("`") and inline_part.endswith("`"):
+                    # This is inline code, don't escape
+                    result_parts.append(inline_part)
+                else:
+                    # Regular markdown text, escape curly braces
+                    escaped = inline_part.replace("{", "\\{").replace("}", "\\}")
+                    result_parts.append(escaped)
+
+    return "".join(result_parts)
 
 
 def process_images(
