@@ -73,12 +73,12 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
-          # Create a unique branch name with timestamp
-          BRANCH_NAME="sync-notebooks-$(date +%Y%m%d-%H%M%S)"
+          # Create a unique branch name using the source commit SHA
+          BRANCH_NAME="sync-notebooks-${{ github.sha }}"
           git checkout -b "$BRANCH_NAME"
           
           # Commit changes
-          git commit -m "docs: sync example notebooks from wherobots-examples"
+          git commit -m "docs: sync example notebooks from wherobots-examples@${{ github.sha }}"
           
           # Push the branch
           git push -u origin "$BRANCH_NAME"
