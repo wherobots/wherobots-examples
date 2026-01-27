@@ -7,14 +7,14 @@ and [WherobotsDB](https://wherobots.com/wherobots-db/).
 
 ## Contributing
 
-When raising a PR, make sure to run pre-commit hooks to the notebooks are cleaned and the README is updated.
+When raising a PR, make sure to run pre-commit hooks to ensure that the notebooks are cleaned and the `README` is updated.
 
 ```bash
 pre-commit run --all-files
 ```
 
-Sometimes this will fail and update your notebooks or the README file. Generally, you can rerun the command and it
-will pass as the pre-commit hooks will fix the issues it finds.
+Sometimes this will fail and update your notebooks or the `README` file. Generally, you can re-run the
+command and it will pass as the pre-commit hooks will fix the issues it finds.
 
 ## Repository structure
 
@@ -48,6 +48,7 @@ will pass as the pre-commit hooks will fix the issues it finds.
 |   |-- Part_2_Reading_Spatial_Files.ipynb
 |   |-- Part_3_Accelerating_Geospatial_Datasets.ipynb
 |   `-- Part_4_Spatial_Joins.ipynb
+|-- Makefile
 |-- Open_Data_Connections
 |   |-- ESA_WorldCover.ipynb
 |   |-- Foursquare_Places.ipynb
