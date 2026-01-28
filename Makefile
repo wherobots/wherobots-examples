@@ -13,20 +13,29 @@ DOCS_JSON = $(DOCS_DIR)/docs.json
 # Notebook directories to convert
 NOTEBOOK_DIRS = Getting_Started/ Analyzing_Data/ Reading_and_Writing_Data/ Open_Data_Connections/ scala/
 
-.PHONY: help convert update-nav preview clean all
+.PHONY: help cleanup convert update-nav preview clean all
 
 help:
 	@echo "Usage: make <target>"
 	@echo ""
 	@echo "Targets:"
+	@echo "  cleanup     Remove orphaned MDX files (deleted/renamed notebooks)"
 	@echo "  convert     Convert notebooks to MDX files"
 	@echo "  update-nav  Update docs.json navigation"
 	@echo "  preview     Start Mintlify dev server"
 	@echo "  clean       Remove generated MDX files"
-	@echo "  all         Run convert, update-nav, then preview"
+	@echo "  all         Run cleanup, convert, update-nav, then preview"
 	@echo ""
 	@echo "Configuration:"
 	@echo "  DOCS_DIR    Path to docs repo (default: ../docs)"
+
+cleanup:
+	@echo "Cleaning up orphaned MDX files..."
+	python3 .github/workflows/scripts/cleanup_orphaned_mdx.py \
+		$(NOTEBOOK_DIRS) \
+		--mdx-dir $(NOTEBOOKS_OUTPUT_DIR) \
+		--exclude-prefix Raster_Inference \
+		-v
 
 convert:
 	@echo "Converting notebooks to MDX..."
@@ -42,7 +51,7 @@ update-nav:
 		--docs-json $(DOCS_JSON) \
 		--notebooks-dir $(NOTEBOOKS_OUTPUT_DIR)
 
-preview: convert update-nav
+preview: cleanup convert update-nav
 	@echo "Starting Mintlify dev server..."
 	@echo "Open http://localhost:3000 in your browser"
 	cd $(DOCS_DIR) && mintlify dev
@@ -51,4 +60,4 @@ clean:
 	@echo "Removing generated MDX files..."
 	rm -rf $(NOTEBOOKS_OUTPUT_DIR)
 
-all: convert update-nav preview
+all: cleanup convert update-nav preview

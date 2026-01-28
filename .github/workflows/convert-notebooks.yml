@@ -8,6 +8,7 @@ on:
       - '**/*.ipynb'
       - '.github/workflows/convert-notebooks.yml'
       - '.github/workflows/scripts/notebook_to_mdx.py'
+      - '.github/workflows/scripts/cleanup_orphaned_mdx.py'
   workflow_dispatch:
 
 permissions:
@@ -35,6 +36,18 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Clean up orphaned MDX files
+        run: |
+          python wherobots-examples/.github/workflows/scripts/cleanup_orphaned_mdx.py \
+            wherobots-examples/Getting_Started/ \
+            wherobots-examples/Analyzing_Data/ \
+            wherobots-examples/Reading_and_Writing_Data/ \
+            wherobots-examples/Open_Data_Connections/ \
+            wherobots-examples/scala/ \
+            --mdx-dir docs/tutorials/example-notebooks \
+            --exclude-prefix Raster_Inference \
+            -v
+
       - name: Convert notebooks to MDX
         run: |
           python wherobots-examples/.github/workflows/scripts/notebook_to_mdx.py \
@@ -57,7 +70,8 @@ jobs:
         id: git-check
         working-directory: docs
         run: |
-          git add tutorials/example-notebooks/ docs.json
+          # Use -A to stage additions, modifications, AND deletions
+          git add -A tutorials/example-notebooks/ docs.json
           if git diff --staged --quiet; then
             echo "changes=false" >> $GITHUB_OUTPUT
           else
