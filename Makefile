@@ -10,8 +10,8 @@ DOCS_DIR ?= ../docs
 NOTEBOOKS_OUTPUT_DIR = $(DOCS_DIR)/tutorials/example-notebooks
 DOCS_JSON = $(DOCS_DIR)/docs.json
 
-# Notebook directories to convert
-NOTEBOOK_DIRS = Getting_Started/ Analyzing_Data/ Reading_and_Writing_Data/ Open_Data_Connections/ scala/
+# Dynamically find all directories containing notebooks
+NOTEBOOK_DIRS = $(shell find . -name "*.ipynb" -type f | xargs -I {} dirname {} | sort -u | grep -v ".ipynb_checkpoints")
 
 .PHONY: help cleanup convert update-nav preview clean all
 
