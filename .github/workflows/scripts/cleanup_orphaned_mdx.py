@@ -160,7 +160,7 @@ def main():
 
     # Write removed MDX names to file if requested (for PR descriptions)
     if args.output_file:
-        mdx_names = sorted([name for name in orphaned_names])
+        mdx_names = sorted(orphaned_names)
         with open(args.output_file, "w") as f:
             f.write("\n".join(mdx_names))
         if args.verbose:

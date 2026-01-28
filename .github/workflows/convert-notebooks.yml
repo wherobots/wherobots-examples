@@ -53,7 +53,6 @@ jobs:
           if [ -f /tmp/removed-mdx.txt ] && [ -s /tmp/removed-mdx.txt ]; then
             echo "has_deletions=true" >> $GITHUB_OUTPUT
             # Format as markdown list for PR body
-            DELETED_LIST=$(cat /tmp/removed-mdx.txt | sed 's/^/- /' | tr '\n' '§')
             echo "deleted_files<<EOF" >> $GITHUB_OUTPUT
             cat /tmp/removed-mdx.txt | sed 's/^/- /' >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
