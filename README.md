@@ -29,9 +29,12 @@ command and it will pass as the pre-commit hooks will fix the issues it finds.
 |   |-- Local_Outlier_Factor.ipynb
 |   |-- PMTiles-railroad.ipynb
 |   |-- RasterFlow_Bring_Your_Own_Model.ipynb
+|   |-- RasterFlow_Bring_Your_Own_Rasters_NAIP.ipynb
 |   |-- RasterFlow_CHM.ipynb
+|   |-- RasterFlow_ChangeDetection.ipynb
 |   |-- RasterFlow_Chesapeake.ipynb
 |   |-- RasterFlow_FTW.ipynb
+|   |-- RasterFlow_S2_Mosaic.ipynb
 |   |-- RasterFlow_Tile2Net.ipynb
 |   |-- Raster_Inference_Bring_Your_Own_Model.ipynb
 |   |-- Raster_Inference_Classification.ipynb

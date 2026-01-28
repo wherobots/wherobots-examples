@@ -29,7 +29,6 @@ jobs:
           repository: wherobots/docs
           token: ${{ secrets.DOCS_REPO_TOKEN }}
           path: docs
-          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -87,9 +86,6 @@ jobs:
           # Configure git
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          
-          # Configure remote with authentication for push
-          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/wherobots/docs.git"
           
           # Create a unique branch name using the source commit SHA
           BRANCH_NAME="sync-notebooks-${{ github.sha }}"
