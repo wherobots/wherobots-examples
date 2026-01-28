@@ -8,6 +8,7 @@ notebook was deleted or renamed).
 """
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -113,6 +114,10 @@ def main():
         action="store_true",
         help="Verbose output",
     )
+    parser.add_argument(
+        "--output-file",
+        help="Write list of removed MDX files (names only) to this file",
+    )
 
     args = parser.parse_args()
 
@@ -152,6 +157,14 @@ def main():
     # Output removed files for git operations
     for path in removed:
         print(f"REMOVED: {path}")
+
+    # Write removed MDX names to file if requested (for PR descriptions)
+    if args.output_file:
+        mdx_names = sorted([name for name in orphaned_names])
+        with open(args.output_file, "w") as f:
+            f.write("\n".join(mdx_names))
+        if args.verbose:
+            print(f"Wrote {len(mdx_names)} removed MDX names to {args.output_file}")
 
 
 if __name__ == "__main__":
