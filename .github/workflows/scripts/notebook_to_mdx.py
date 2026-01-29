@@ -314,6 +314,10 @@ def convert_notebook_to_mdx(
     mdx_parts.append("---")
     mdx_parts.append("")
 
+    # Add Private Preview badge
+    mdx_parts.append('<Badge color="purple">Private Preview</Badge>')
+    mdx_parts.append("")
+
     # Add Tip callout about running the notebook interactively
     mdx_parts.append("<Tip>")
     mdx_parts.append(
