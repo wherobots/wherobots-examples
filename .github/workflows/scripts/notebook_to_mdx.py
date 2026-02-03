@@ -305,9 +305,9 @@ def convert_notebook_to_mdx(
         or "python"  # Default to python
     )
 
-    # Check if this is a RasterFlow notebook (Model Hub) or regular notebook (Wherobots Cloud)
+    # Check if this is a RasterFlow/Raster_Inference notebook (Model Hub) or regular notebook (Wherobots Cloud)
     notebook_name = notebook_path.name
-    is_rasterflow = notebook_name.startswith(
+    is_model_hub = notebook_name.startswith(
         "Raster_Inference"
     ) or notebook_name.startswith("RasterFlow")
 
@@ -320,8 +320,8 @@ def convert_notebook_to_mdx(
     mdx_parts.append("---")
     mdx_parts.append("")
 
-    # Add Private Preview badge for RasterFlow notebooks only
-    if is_rasterflow:
+    # Add Private Preview badge for RasterFlow notebooks only (not Raster_Inference)
+    if notebook_name.startswith("RasterFlow"):
         mdx_parts.append('<Badge color="purple">Private Preview</Badge>')
         mdx_parts.append("")
 
@@ -334,7 +334,7 @@ def convert_notebook_to_mdx(
     mdx_parts.append("To run this notebook interactively:")
     mdx_parts.append("")
 
-    if is_rasterflow:
+    if is_model_hub:
         mdx_parts.append(
             "1. Go to the [**Wherobots Model Hub**](https://www.wherobots.com/model-hub)."
         )
