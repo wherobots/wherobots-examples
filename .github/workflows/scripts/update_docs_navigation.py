@@ -105,6 +105,8 @@ def update_docs_json(docs_json_path: Path, notebook_paths: dict[str, str]) -> No
         docs_json_path: Path to the docs.json file
         notebook_paths: Dict mapping notebook stem to page path
     """
+    from collections import defaultdict
+
     with open(docs_json_path, "r", encoding="utf-8") as f:
         docs_config = json.load(f)
 
@@ -125,25 +127,28 @@ def update_docs_json(docs_json_path: Path, notebook_paths: dict[str, str]) -> No
     inserted_count = 0
     skipped_notebooks = []
 
-    # Insert each notebook into its mapped location
+    # Group notebooks by their target location to avoid redundant find_group() calls
+    notebooks_by_location: dict[tuple[str, ...], list[str]] = defaultdict(list)
     for notebook_name, page_path in notebook_paths.items():
         if notebook_name not in NOTEBOOK_LOCATIONS:
             skipped_notebooks.append(notebook_name)
             continue
+        location = tuple(NOTEBOOK_LOCATIONS[notebook_name])
+        notebooks_by_location[location].append(page_path)
 
-        group_path = NOTEBOOK_LOCATIONS[notebook_name]
-        target_pages = find_group(tutorials_pages, group_path)
+    # Insert notebooks, one find_group() call per unique location
+    for group_path, page_paths in notebooks_by_location.items():
+        target_pages = find_group(tutorials_pages, list(group_path))
 
         if target_pages is None:
-            print(
-                f"Warning: Could not find group path {group_path} for {notebook_name}"
-            )
+            print(f"Warning: Could not find group path {list(group_path)}")
             continue
 
-        # Only add if not already present
-        if page_path not in target_pages:
-            target_pages.append(page_path)
-            inserted_count += 1
+        for page_path in page_paths:
+            # Only add if not already present
+            if page_path not in target_pages:
+                target_pages.append(page_path)
+                inserted_count += 1
 
     if skipped_notebooks:
         print(f"Skipped notebooks not in NOTEBOOK_LOCATIONS: {skipped_notebooks}")
