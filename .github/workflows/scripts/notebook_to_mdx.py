@@ -78,6 +78,56 @@ def remove_table_of_contents(text: str) -> str:
     return text
 
 
+def convert_notebook_links(text: str) -> str:
+    """Convert links to .ipynb files to their corresponding MDX page paths.
+
+    Transforms links like:
+    - [text](./Some_Notebook.ipynb) -> [text](/tutorials/example-notebooks/some-notebook)
+    - [text](../path/Some_Notebook.ipynb) -> [text](/tutorials/example-notebooks/some-notebook)
+    - [text](Some_Notebook.ipynb#section) -> [text](/tutorials/example-notebooks/some-notebook#section)
+    """
+
+    def replace_notebook_link(match: re.Match) -> str:
+        link_text = match.group(1)
+        link_path = match.group(2)
+
+        # Check if this is a .ipynb link
+        if not link_path.lower().endswith(".ipynb") and "#" in link_path:
+            # Check for .ipynb with anchor (e.g., notebook.ipynb#section)
+            path_part, anchor = link_path.rsplit("#", 1)
+            if not path_part.lower().endswith(".ipynb"):
+                return match.group(0)  # Not a notebook link
+        elif not link_path.lower().endswith(".ipynb"):
+            return match.group(0)  # Not a notebook link
+
+        # Extract anchor if present
+        anchor = ""
+        path_part = link_path
+        if "#" in link_path:
+            path_part, anchor = link_path.rsplit("#", 1)
+            anchor = f"#{anchor}"
+
+        # Extract just the filename (remove any path components)
+        filename = path_part.split("/")[-1]
+
+        # Remove .ipynb extension
+        notebook_name = filename[:-6]  # Remove ".ipynb"
+
+        # Convert to MDX page slug (underscores to dashes, lowercase)
+        page_slug = notebook_name.replace("_", "-").lower()
+
+        # Build the new URL path
+        new_path = f"/tutorials/example-notebooks/{page_slug}{anchor}"
+
+        return f"[{link_text}]({new_path})"
+
+    # Match markdown link syntax: [text](path)
+    # This regex matches [link text](link url) but not ![alt](image url)
+    updated_text = re.sub(r"(?<!!)\[([^\]]+)\]\(([^)]+)\)", replace_notebook_link, text)
+
+    return updated_text
+
+
 def sanitize_markdown_for_mdx(text: str) -> str:
     """Sanitize markdown content for MDX/JSX compatibility."""
     # Fix HTML void elements to be self-closing
@@ -372,6 +422,9 @@ def convert_notebook_to_mdx(
             source = process_images(
                 source, cell, notebook_path, images_dir, notebook_slug, verbose
             )
+
+            # Convert .ipynb links to MDX page paths
+            source = convert_notebook_links(source)
 
             # Check if this cell contains the first H1 we should skip
             if skip_first_h1 and re.search(r"^#\s+", source, re.MULTILINE):
