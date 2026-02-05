@@ -401,8 +401,8 @@ def convert_notebook_to_mdx(
             mdx_parts.append("```")
             mdx_parts.append("")
 
-    # Generate output filename (underscores to dashes)
-    output_name = notebook_path.stem.replace("_", "-") + ".mdx"
+    # Generate output filename (underscores to dashes, lowercase)
+    output_name = notebook_path.stem.replace("_", "-").lower() + ".mdx"
     output_path = output_dir / output_name
 
     # Ensure output directory exists
