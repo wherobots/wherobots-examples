@@ -28,7 +28,7 @@ help:
 	@echo "Configuration:"
 	@echo "  DOCS_DIR    Path to docs repo (default: ../docs)"
 
-convert:
+convert: clean
 	@echo "Converting notebooks to MDX..."
 	python3 .github/workflows/scripts/notebook_to_mdx.py \
 		$(NOTEBOOK_DIRS) \

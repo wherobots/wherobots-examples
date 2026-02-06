@@ -11,26 +11,44 @@ import argparse
 from pathlib import Path
 
 
-# Mapping of MDX filename prefixes/patterns to category groups
-CATEGORY_MAPPINGS = {
-    "Part-": "Getting Started",
-    "RasterFlow-": "RasterFlow",
-    "Clustering-": "Analyzing Data",
-    "Getis-": "Analyzing Data",
-    "GPS-": "Analyzing Data",
-    "Isochrones": "Analyzing Data",
-    "K-Nearest-": "Analyzing Data",
-    "Local-Outlier-": "Analyzing Data",
-    "PMTiles-": "Analyzing Data",
-    "Zonal-": "Analyzing Data",
-    "Loading-Common-": "Reading and Writing Data",
-    "Map-Tile-": "Reading and Writing Data",
-    "STAC-": "Reading and Writing Data",
-    "Unity-": "Reading and Writing Data",
-    "ESA-": "Open Data Connections",
-    "Foursquare-": "Open Data Connections",
-    "NOAA-": "Open Data Connections",
-    "Overture-": "Open Data Connections",
+# Full mapping of MDX filenames (without extension) to category groups
+# Filenames are lowercase with hyphens (converted from notebook names)
+FILENAME_TO_CATEGORY = {
+    # Getting Started
+    "part-1-loading-data": "Getting Started",
+    "part-2-reading-spatial-files": "Getting Started",
+    "part-3-accelerating-geospatial-datasets": "Getting Started",
+    "part-4-spatial-joins": "Getting Started",
+    # Analyzing Data
+    "clustering-dbscan": "Analyzing Data",
+    "getis-ord-gi*": "Analyzing Data",
+    "gps-map-matching": "Analyzing Data",
+    "isochrones": "Analyzing Data",
+    "k-nearest-neighbor-join": "Analyzing Data",
+    "local-outlier-factor": "Analyzing Data",
+    "pmtiles-railroad": "Analyzing Data",
+    "zonal-stats-esaworldcover-texas": "Analyzing Data",
+    # RasterFlow
+    "rasterflow-bring-your-own-model": "RasterFlow",
+    "rasterflow-bring-your-own-rasters-naip": "RasterFlow",
+    "rasterflow-changedetection": "RasterFlow",
+    "rasterflow-chesapeake": "RasterFlow",
+    "rasterflow-chm": "RasterFlow",
+    "rasterflow-ftw": "RasterFlow",
+    "rasterflow-s2-mosaic": "RasterFlow",
+    "rasterflow-tile2net": "RasterFlow",
+    # Reading and Writing Data
+    "loading-common-spatial-file-types": "Reading and Writing Data",
+    "map-tile-generation": "Reading and Writing Data",
+    "stac-reader": "Reading and Writing Data",
+    "unity-catalog-delta-tables": "Reading and Writing Data",
+    # Open Data Connections
+    "esa-worldcover": "Open Data Connections",
+    "foursquare-places": "Open Data Connections",
+    "noaa-swdi": "Open Data Connections",
+    "overture-maps": "Open Data Connections",
+    # Scala
+    "getting-started": "Scala",
 }
 
 # Order of categories in navigation
@@ -46,13 +64,7 @@ CATEGORY_ORDER = [
 
 def get_category(filename: str) -> str:
     """Determine category for a notebook based on filename."""
-    for prefix, category in CATEGORY_MAPPINGS.items():
-        if filename.startswith(prefix):
-            return category
-    # Default to Scala for Getting-Started (scala version)
-    if filename == "Getting-Started":
-        return "Scala"
-    return "Other"
+    return FILENAME_TO_CATEGORY.get(filename, "Other")
 
 
 def build_notebook_navigation(notebooks_dir: Path) -> list:
