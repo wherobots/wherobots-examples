@@ -11,81 +11,64 @@ import argparse
 from pathlib import Path
 
 
-# Mapping of notebook filename (stem) to its location path in docs.json navigation.
-# Each path is a list of group names to traverse to reach the target pages list.
-# Empty list means notebook is not included in navigation.
-NOTEBOOK_LOCATIONS = {
-    # Getting Started (top-level group)
-    "Part-1-Loading-Data": ["Getting Started"],
-    "Part-2-Reading-Spatial-Files": ["Getting Started"],
-    "Part-3-Accelerating-Geospatial-Datasets": ["Getting Started"],
-    "Part-4-Spatial-Joins": ["Getting Started"],
-    # WherobotsDB > Vector Tiles (PMTiles)
-    "PMTiles-railroad": ["WherobotsDB", "Vector Tiles (PMTiles)"],
-    # Data Connections
-    "Unity-Catalog-Delta-Tables": ["Data Connections"],
-    "STAC-Reader": ["Data Connections"],
-    "ESA-WorldCover": ["Data Connections"],
-    "Foursquare-Places": ["Data Connections"],
-    "NOAA-SWDI": ["Data Connections"],
-    "Overture-Maps": ["Data Connections"],
+# Full mapping of MDX filenames (without extension) to category groups
+# Filenames are lowercase with hyphens (converted from notebook names)
+FILENAME_TO_CATEGORY = {
+    # Getting Started
+    "part-1-loading-data": "Getting Started",
+    "part-2-reading-spatial-files": "Getting Started",
+    "part-3-accelerating-geospatial-datasets": "Getting Started",
+    "part-4-spatial-joins": "Getting Started",
+    # Analyzing Data
+    "clustering-dbscan": "Analyzing Data",
+    "getis-ord-gi*": "Analyzing Data",
+    "gps-map-matching": "Analyzing Data",
+    "isochrones": "Analyzing Data",
+    "k-nearest-neighbor-join": "Analyzing Data",
+    "local-outlier-factor": "Analyzing Data",
+    "pmtiles-railroad": "Analyzing Data",
+    "zonal-stats-esaworldcover-texas": "Analyzing Data",
     # RasterFlow
-    "RasterFlow-CHM": ["RasterFlow"],
-    "RasterFlow-Chesapeake": ["RasterFlow"],
-    "RasterFlow-FTW": ["RasterFlow"],
-    "RasterFlow-Tile2Net": ["RasterFlow"],
-    "RasterFlow-Bring-Your-Own-Model": ["RasterFlow"],
-    # Advanced Topics
-    "Isochrones": ["Advanced Topics"],
-    "Zonal-Stats-ESAWorldCover-Texas": ["Advanced Topics"],
-    "Loading-Common-Spatial-File-Types": ["Advanced Topics"],
-    "Map-Tile-Generation": ["Advanced Topics"],
-    "Getting-Started": ["Advanced Topics"],  # Scala notebook
-    # WherobotsAI > Spatial Statistics
-    "Clustering-DBSCAN": ["WherobotsAI", "Spatial Statistics"],
-    "Getis-Ord-Gi*": ["WherobotsAI", "Spatial Statistics"],
-    "Local-Outlier-Factor": ["WherobotsAI", "Spatial Statistics"],
-    "K-Nearest-Neighbor-Join": ["WherobotsAI", "Spatial Statistics"],
-    # WherobotsAI (direct child)
-    "GPS-Map-Matching": ["WherobotsAI"],
+    "rasterflow-bring-your-own-model": "RasterFlow",
+    "rasterflow-bring-your-own-rasters-naip": "RasterFlow",
+    "rasterflow-changedetection": "RasterFlow",
+    "rasterflow-chesapeake": "RasterFlow",
+    "rasterflow-chm": "RasterFlow",
+    "rasterflow-ftw": "RasterFlow",
+    "rasterflow-s2-mosaic": "RasterFlow",
+    "rasterflow-tile2net": "RasterFlow",
+    # Reading and Writing Data
+    "loading-common-spatial-file-types": "Reading and Writing Data",
+    "map-tile-generation": "Reading and Writing Data",
+    "stac-reader": "Reading and Writing Data",
+    "unity-catalog-delta-tables": "Reading and Writing Data",
+    # Open Data Connections
+    "esa-worldcover": "Open Data Connections",
+    "foursquare-places": "Open Data Connections",
+    "noaa-swdi": "Open Data Connections",
+    "overture-maps": "Open Data Connections",
+    # Scala
+    "getting-started": "Scala",
 }
 
-# Notebooks to exclude from navigation entirely
-EXCLUDED_NOTEBOOKS = {"index"}
+# Order of categories in navigation
+CATEGORY_ORDER = [
+    "Getting Started",
+    "Analyzing Data",
+    "RasterFlow",
+    "Reading and Writing Data",
+    "Open Data Connections",
+    "Scala",
+]
 
 
-def find_group(pages: list, group_path: list[str]) -> list | None:
-    """
-    Find a nested group's pages list by following the path.
-
-    Args:
-        pages: The pages list to search within
-        group_path: List of group names to traverse (e.g., ["WherobotsAI", "Spatial Statistics"])
-
-    Returns:
-        The pages list of the target group, or None if not found
-    """
-    current = pages
-    for group_name in group_path:
-        found = None
-        for item in current:
-            if isinstance(item, dict) and item.get("group") == group_name:
-                found = item.get("pages", [])
-                break
-        if found is None:
-            return None
-        current = found
-    return current
+def get_category(filename: str) -> str:
+    """Determine category for a notebook based on filename."""
+    return FILENAME_TO_CATEGORY.get(filename, "Other")
 
 
-def collect_notebook_paths(notebooks_dir: Path) -> dict[str, str]:
-    """
-    Collect all MDX notebooks and return a mapping of filename stem to page path.
-
-    Returns:
-        Dict mapping notebook stem (e.g., "Part-1-Loading-Data") to
-        page path (e.g., "tutorials/example-notebooks/Part-1-Loading-Data")
-    """
+def build_notebook_navigation(notebooks_dir: Path) -> list:
+    """Build navigation structure for notebooks."""
     mdx_files = sorted(notebooks_dir.glob("*.mdx"))
     result = {}
 
