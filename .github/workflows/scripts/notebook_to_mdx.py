@@ -79,26 +79,25 @@ def remove_table_of_contents(text: str) -> str:
 
 
 def convert_notebook_links(text: str) -> str:
-    """Convert links to .ipynb files to their corresponding MDX page paths.
+    """Convert Wherobots notebook links in markdown format to MDX page paths.
+
+    Only converts proper markdown links ([text](path.ipynb)). Does not convert
+    .ipynb references inside inline code backticks.
 
     Transforms links like:
     - [text](./Some_Notebook.ipynb) -> [text](/tutorials/example-notebooks/some-notebook)
     - [text](../path/Some_Notebook.ipynb) -> [text](/tutorials/example-notebooks/some-notebook)
     - [text](Some_Notebook.ipynb#section) -> [text](/tutorials/example-notebooks/some-notebook#section)
+
+    Does NOT convert:
+    - `RasterFlow_FTW.ipynb` (inline code, not a markdown link)
+    - `examples/Analyzing-Data/Notebook.ipynb` (inline code, not a markdown link)
+    - [text](https://example.com/notebook.ipynb) (external URL)
     """
 
     def replace_notebook_link(match: re.Match) -> str:
         link_text = match.group(1)
         link_path = match.group(2)
-
-        # Check if this is a .ipynb link
-        if not link_path.lower().endswith(".ipynb") and "#" in link_path:
-            # Check for .ipynb with anchor (e.g., notebook.ipynb#section)
-            path_part, anchor = link_path.rsplit("#", 1)
-            if not path_part.lower().endswith(".ipynb"):
-                return match.group(0)  # Not a notebook link
-        elif not link_path.lower().endswith(".ipynb"):
-            return match.group(0)  # Not a notebook link
 
         # Extract anchor if present
         anchor = ""
@@ -106,6 +105,14 @@ def convert_notebook_links(text: str) -> str:
         if "#" in link_path:
             path_part, anchor = link_path.rsplit("#", 1)
             anchor = f"#{anchor}"
+
+        # Check if this is a .ipynb link
+        if not path_part.lower().endswith(".ipynb"):
+            return match.group(0)  # Not a notebook link
+
+        # Don't convert external URLs (e.g., https://example.com/notebook.ipynb)
+        if path_part.startswith(("http://", "https://")):
+            return match.group(0)
 
         # Extract just the filename (remove any path components)
         filename = path_part.split("/")[-1]
@@ -121,9 +128,14 @@ def convert_notebook_links(text: str) -> str:
 
         return f"[{link_text}]({new_path})"
 
-    # Match markdown link syntax: [text](path)
-    # This regex matches [link text](link url) but not ![alt](image url)
-    updated_text = re.sub(r"(?<!!)\[([^\]]+)\]\(([^)]+)\)", replace_notebook_link, text)
+    # Match markdown link syntax: [text](path) but not when inside backticks.
+    # This regex matches [link text](link url) but not ![alt](image url).
+    # It also skips matches that are preceded by a backtick (inside inline code).
+    updated_text = re.sub(
+        r"(?<!`)(?<!!)\[([^\]]+)\]\(([^)]+\.ipynb(?:#[^)]*)?)\)(?!`)",
+        replace_notebook_link,
+        text,
+    )
 
     return updated_text
 
