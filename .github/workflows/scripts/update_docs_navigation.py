@@ -84,7 +84,7 @@ def find_group(pages: list, group_path: list[str]) -> Optional[list]:
 
     for item in pages:
         if isinstance(item, dict) and item.get("group") == target_group:
-            nested_pages = item.get("pages", [])
+            nested_pages = item.setdefault("pages", [])
             if remaining_path:
                 # Continue traversing deeper
                 return find_group(nested_pages, remaining_path)
@@ -119,7 +119,8 @@ def collect_notebook_paths(notebooks_dir: Path) -> dict[str, str]:
 
 def update_docs_json(docs_json_path: Path, notebook_paths: dict[str, str]) -> None:
     """
-    Update docs.json by inserting notebook pages into their mapped locations.
+    Update docs.json by inserting notebook pages into their mapped locations
+    and removing stale notebook entries that are no longer discovered.
 
     Args:
         docs_json_path: Path to the docs.json file
@@ -141,9 +142,13 @@ def update_docs_json(docs_json_path: Path, notebook_paths: dict[str, str]) -> No
         print("Error: Could not find 'Spatial Analytics Tutorials' tab")
         return
 
-    tutorials_pages = tutorials_tab.get("pages", [])
+    tutorials_pages = tutorials_tab.setdefault("pages", [])
     inserted_count = 0
+    removed_count = 0
     skipped_notebooks = []
+
+    # Collect all valid notebook page paths for stale entry detection
+    all_valid_paths = set(notebook_paths.values())
 
     # Group notebooks by their target location to avoid redundant find_group() calls
     notebooks_by_location: dict[tuple[str, ...], list[str]] = defaultdict(list)
@@ -154,16 +159,34 @@ def update_docs_json(docs_json_path: Path, notebook_paths: dict[str, str]) -> No
         location = tuple(NOTEBOOK_LOCATIONS[notebook_name])
         notebooks_by_location[location].append(page_path)
 
-    # Insert notebooks, one find_group() call per unique location
+    # Collect all group paths that have mapped notebooks (for stale removal)
+    all_group_paths = set(notebooks_by_location.keys())
+    # Also include group paths from NOTEBOOK_LOCATIONS that may have no current notebooks
+    for loc in NOTEBOOK_LOCATIONS.values():
+        all_group_paths.add(tuple(loc))
+
+    # Insert notebooks and remove stale entries, one find_group() call per unique location
     # Sort by group_path for deterministic output
-    for group_path in sorted(notebooks_by_location.keys()):
-        page_paths = sorted(notebooks_by_location[group_path])
+    for group_path in sorted(all_group_paths):
         target_pages = find_group(tutorials_pages, list(group_path))
 
         if target_pages is None:
-            print(f"Warning: Could not find group path {list(group_path)}")
             continue
 
+        # Remove stale notebook entries (auto-inserted paths no longer in discovery set)
+        stale = [
+            p
+            for p in target_pages
+            if isinstance(p, str)
+            and p.startswith("tutorials/example-notebooks/")
+            and p not in all_valid_paths
+        ]
+        for p in stale:
+            target_pages.remove(p)
+            removed_count += 1
+
+        # Insert new notebooks for this location
+        page_paths = sorted(notebooks_by_location.get(group_path, []))
         for page_path in page_paths:
             # Only add if not already present
             if page_path not in target_pages:
@@ -180,7 +203,9 @@ def update_docs_json(docs_json_path: Path, notebook_paths: dict[str, str]) -> No
         json.dump(docs_config, f, indent=2)
         f.write("\n")
 
-    print(f"Updated {docs_json_path}: inserted {inserted_count} notebook(s)")
+    print(
+        f"Updated {docs_json_path}: inserted {inserted_count}, removed {removed_count} notebook(s)"
+    )
 
 
 def main():
