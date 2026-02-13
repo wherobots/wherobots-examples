@@ -93,8 +93,9 @@ def remove_table_of_contents(text: str) -> str:
 def convert_notebook_links(text: str) -> str:
     """Convert Wherobots notebook links in markdown format to MDX page paths.
 
-    Only converts proper markdown links ([text](path.ipynb)). Does not convert
-    .ipynb references inside inline code backticks.
+    Only converts relative .ipynb links that reference notebooks within this
+    wherobots-examples repository. External .ipynb links (absolute URLs pointing
+    to other sites like GitHub, Colab, etc.) are left as-is.
 
     Transforms links like:
     - [text](./Some_Notebook.ipynb) -> [text](/tutorials/example-notebooks/some-notebook)
@@ -105,6 +106,8 @@ def convert_notebook_links(text: str) -> str:
     - `RasterFlow_FTW.ipynb` (inline code, not a markdown link)
     - `examples/Analyzing-Data/Notebook.ipynb` (inline code, not a markdown link)
     - [text](https://example.com/notebook.ipynb) (external URL)
+    - [text](https://github.com/org/repo/blob/main/notebook.ipynb) (external URL)
+    - [text](ftp://server/notebook.ipynb) (external URL)
     """
 
     def replace_notebook_link(match: re.Match) -> str:
@@ -122,8 +125,10 @@ def convert_notebook_links(text: str) -> str:
         if not path_part.lower().endswith(".ipynb"):
             return match.group(0)  # Not a notebook link
 
-        # Don't convert external URLs (e.g., https://example.com/notebook.ipynb)
-        if path_part.startswith(("http://", "https://")):
+        # Only convert relative links (wherobots-internal notebook references).
+        # Skip any link with a URL scheme (http://, https://, ftp://, etc.)
+        # or absolute paths — these point to external .ipynb files.
+        if re.match(r"[a-zA-Z][a-zA-Z0-9+.\-]*://", path_part):
             return match.group(0)
 
         # Extract just the filename (remove any path components)
@@ -140,9 +145,12 @@ def convert_notebook_links(text: str) -> str:
 
         return f"[{link_text}]({new_path})"
 
-    # Match markdown link syntax: [text](path) but not when inside backticks.
-    # This regex matches [link text](link url) but not ![alt](image url).
-    # It also skips matches that are preceded by a backtick (inside inline code).
+    # Regex breakdown:
+    #   (?<!`)   - not preceded by a backtick (skip inline code)
+    #   (?<!!)   - not preceded by ! (skip image links)
+    #   \[([^\]]+)\]  - capture link text inside []
+    #   \(([^)]+\.ipynb(?:#[^)]*)?)\)  - capture .ipynb path (with optional #anchor) inside ()
+    #   (?!`)    - not followed by a backtick (skip inline code)
     updated_text = re.sub(
         r"(?<!`)(?<!!)\[([^\]]+)\]\(([^)]+\.ipynb(?:#[^)]*)?)\)(?!`)",
         replace_notebook_link,
