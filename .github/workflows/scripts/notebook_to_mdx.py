@@ -17,6 +17,18 @@ from pathlib import Path
 from typing import Optional
 
 
+def to_page_slug(notebook_name: str) -> str:
+    """Convert a notebook name to a page slug.
+
+    Transforms underscores to dashes and lowercases.
+
+    Examples:
+        "Part_1_Loading_Data" -> "part-1-loading-data"
+        "Clustering_DBSCAN" -> "clustering-dbscan"
+    """
+    return notebook_name.replace("_", "-").lower()
+
+
 def extract_title_from_markdown(cells: list) -> str:
     """Extract title from first H1 heading in notebook."""
     for cell in cells:
@@ -76,6 +88,76 @@ def remove_table_of_contents(text: str) -> str:
     text = re.sub(pattern, "", text)
 
     return text
+
+
+def convert_notebook_links(text: str) -> str:
+    """Convert Wherobots notebook links in markdown format to MDX page paths.
+
+    Only converts relative .ipynb links that reference notebooks within this
+    wherobots-examples repository. External .ipynb links (absolute URLs pointing
+    to other sites like GitHub, Colab, etc.) are left as-is.
+
+    Transforms links like:
+    - [text](./Some_Notebook.ipynb) -> [text](/tutorials/example-notebooks/some-notebook)
+    - [text](../path/Some_Notebook.ipynb) -> [text](/tutorials/example-notebooks/some-notebook)
+    - [text](Some_Notebook.ipynb#section) -> [text](/tutorials/example-notebooks/some-notebook#section)
+
+    Does NOT convert:
+    - `RasterFlow_FTW.ipynb` (inline code, not a markdown link)
+    - `examples/Analyzing-Data/Notebook.ipynb` (inline code, not a markdown link)
+    - [text](https://example.com/notebook.ipynb) (external URL)
+    - [text](https://github.com/org/repo/blob/main/notebook.ipynb) (external URL)
+    - [text](ftp://server/notebook.ipynb) (external URL)
+    """
+
+    def replace_notebook_link(match: re.Match) -> str:
+        link_text = match.group(1)
+        link_path = match.group(2)
+
+        # Extract anchor if present
+        anchor = ""
+        path_part = link_path
+        if "#" in link_path:
+            path_part, anchor = link_path.rsplit("#", 1)
+            anchor = f"#{anchor}"
+
+        # Check if this is a .ipynb link
+        if not path_part.lower().endswith(".ipynb"):
+            return match.group(0)  # Not a notebook link
+
+        # Only convert relative links (wherobots-internal notebook references).
+        # Skip any link with a URL scheme (http://, https://, ftp://, etc.)
+        # or absolute paths — these point to external .ipynb files.
+        if re.match(r"[a-zA-Z][a-zA-Z0-9+.\-]*://", path_part):
+            return match.group(0)
+
+        # Extract just the filename (remove any path components)
+        filename = path_part.split("/")[-1]
+
+        # Remove .ipynb extension
+        notebook_name = filename[:-6]  # Remove ".ipynb"
+
+        # Convert to MDX page slug
+        page_slug = to_page_slug(notebook_name)
+
+        # Build the new URL path
+        new_path = f"/tutorials/example-notebooks/{page_slug}{anchor}"
+
+        return f"[{link_text}]({new_path})"
+
+    # Regex breakdown:
+    #   (?<!`)   - not preceded by a backtick (skip inline code)
+    #   (?<!!)   - not preceded by ! (skip image links)
+    #   \[([^\]]+)\]  - capture link text inside []
+    #   \(([^)]+\.ipynb(?:#[^)]*)?)\)  - capture .ipynb path (with optional #anchor) inside ()
+    #   (?!`)    - not followed by a backtick (skip inline code)
+    updated_text = re.sub(
+        r"(?<!`)(?<!!)\[([^\]]+)\]\(([^)]+\.ipynb(?:#[^)]*)?)\)(?!`)",
+        replace_notebook_link,
+        text,
+    )
+
+    return updated_text
 
 
 def sanitize_markdown_for_mdx(text: str) -> str:
@@ -289,7 +371,7 @@ def convert_notebook_to_mdx(
         return None
 
     # Generate notebook slug for unique image names
-    notebook_slug = notebook_path.stem.replace("_", "-").lower()
+    notebook_slug = to_page_slug(notebook_path.stem)
 
     # Images directory
     images_dir = output_dir / "images"
@@ -373,6 +455,9 @@ def convert_notebook_to_mdx(
                 source, cell, notebook_path, images_dir, notebook_slug, verbose
             )
 
+            # Convert .ipynb links to MDX page paths
+            source = convert_notebook_links(source)
+
             # Check if this cell contains the first H1 we should skip
             if skip_first_h1 and re.search(r"^#\s+", source, re.MULTILINE):
                 # Remove the H1 line but keep rest of cell
@@ -401,8 +486,8 @@ def convert_notebook_to_mdx(
             mdx_parts.append("```")
             mdx_parts.append("")
 
-    # Generate output filename (underscores to dashes, lowercase)
-    output_name = notebook_path.stem.replace("_", "-").lower() + ".mdx"
+    # Generate output filename using shared slug logic
+    output_name = to_page_slug(notebook_path.stem) + ".mdx"
     output_path = output_dir / output_name
 
     # Ensure output directory exists
