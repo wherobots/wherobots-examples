@@ -398,6 +398,7 @@ def convert_notebook_to_mdx(
     # Check if this is a Model Hub notebook or regular notebook (Wherobots Cloud)
     notebook_name = notebook_path.name
     is_model_hub = notebook_path.stem in MODEL_HUB_NOTEBOOKS
+    is_rasterflow = notebook_name.startswith("RasterFlow")
 
     # Build MDX content
     mdx_parts = []
@@ -409,7 +410,7 @@ def convert_notebook_to_mdx(
     mdx_parts.append("")
 
     # Add Private Preview badge for RasterFlow notebooks only
-    if is_model_hub:
+    if is_rasterflow:
         mdx_parts.append('<Badge color="purple">Private Preview</Badge>')
         mdx_parts.append("")
 
