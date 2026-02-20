@@ -16,6 +16,10 @@ import argparse
 from pathlib import Path
 from typing import Optional
 
+# Allow importing from the same directory as this script, regardless of cwd
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from constants import MODEL_HUB_NOTEBOOKS
+
 
 def to_page_slug(notebook_name: str) -> str:
     """Convert a notebook name to a page slug.
@@ -386,14 +390,6 @@ def convert_notebook_to_mdx(
         or metadata.get("kernelspec", {}).get("language")
         or "python"  # Default to python
     )
-
-    # Only these RasterFlow notebooks are available in the Wherobots Model Hub
-    MODEL_HUB_NOTEBOOKS = {
-        "RasterFlow_CHM",
-        "RasterFlow_FTW",
-        "RasterFlow_Tile2Net",
-        "RasterFlow_Chesapeake",
-    }
 
     # Check if this is a Model Hub notebook or regular notebook (Wherobots Cloud)
     notebook_name = notebook_path.name
