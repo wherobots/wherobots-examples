@@ -6,8 +6,7 @@ This script updates the wherobots/docs docs.json file to include
 example notebooks under the "Spatial Analytics Tutorials" tab.
 
 It uses NOTEBOOK_LOCATIONS to map each notebook to its target location
-in the docs.json navigation structure, supporting the nested group
-hierarchy from wherobots/docs PR #144.
+in the docs.json navigation structure, supporting nested group hierarchies.
 """
 
 import json
@@ -24,7 +23,8 @@ EXCLUDED_NOTEBOOKS: set[str] = set()
 # in the docs.json navigation hierarchy. Each value is a list of group names
 # representing the path to traverse to find the target "pages" array.
 #
-# These locations align with the new docs.json structure from wherobots/docs PR #144.
+# These locations must match the actual group names in the "Spatial Analytics
+# Tutorials" tab of docs.json.
 NOTEBOOK_LOCATIONS: dict[str, list[str]] = {
     # Getting Started group (top-level)
     "part-1-loading-data": ["Getting Started"],
@@ -60,7 +60,7 @@ NOTEBOOK_LOCATIONS: dict[str, list[str]] = {
     "getis-ord-gi*": ["WherobotsAI", "Spatial Statistics"],
     "local-outlier-factor": ["WherobotsAI", "Spatial Statistics"],
     "k-nearest-neighbor-join": ["WherobotsAI", "Spatial Statistics"],
-    # GPS Map Matching is under WherobotsAI in PR #144
+    # GPS Map Matching is under WherobotsAI
     "gps-map-matching": ["WherobotsAI"],
 }
 
