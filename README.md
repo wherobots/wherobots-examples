@@ -54,6 +54,50 @@ If you don't add your notebook to the mapping, it will appear under an "Other" c
 
 **Note**: Notebooks with the `Raster_Inference_` prefix are excluded from documentation publishing.
 
+## Local preview
+
+You can preview how notebooks will look on the docs site locally using the Makefile targets. This requires the [`wherobots/docs`](https://github.com/wherobots/docs) repo cloned alongside this repo (at `../docs` by default).
+
+### Prerequisites
+
+- Python 3.x
+- Node.js (for Mintlify CLI via `npx`)
+- `wherobots/docs` repo cloned at `../docs`
+
+### Make targets
+
+| Target | Description |
+|---|---|
+| `make preview` | Full local preview workflow. Syncs the docs repo to `main`, converts notebooks to MDX, updates navigation, and starts the Mintlify dev server at `http://localhost:3000`. |
+| `make preview-branch DOCS_BRANCH=<branch>` | Same as `preview` but checks out a specific docs repo branch instead of `main`. Useful when redesigning the tutorials section on a feature branch. |
+| `make convert` | Converts notebooks to MDX files in the docs repo. Cleans previous output first. |
+| `make update-nav` | Updates `docs.json` navigation to include converted notebooks. |
+| `make sync-docs` | Checks out and pulls the target branch (default: `main`) in the docs repo. |
+| `make clean` | Removes generated MDX files from the docs repo. |
+
+### Configuration
+
+| Variable | Default | Description |
+|---|---|---|
+| `DOCS_DIR` | `../docs` | Path to the `wherobots/docs` repo clone |
+| `DOCS_BRANCH` | `main` | Docs repo branch to sync to |
+
+### Examples
+
+```bash
+# Standard preview against docs main branch
+make preview
+
+# Preview against a feature branch in the docs repo
+make preview-branch DOCS_BRANCH=redesign-tutorials
+
+# Just convert notebooks without starting the server
+make convert
+
+# Use a different docs repo location
+make preview DOCS_DIR=~/projects/docs
+```
+
 ## Repository structure
 
 ```
