@@ -391,7 +391,7 @@ def convert_notebook_to_mdx(
         or "python"  # Default to python
     )
 
-    # Check if this is a Model Hub notebook or regular notebook (Wherobots Cloud)
+    # Check if this is a Model Hub notebook
     notebook_name = notebook_path.name
     is_model_hub = notebook_path.stem in MODEL_HUB_NOTEBOOKS
     is_rasterflow = notebook_name.startswith("RasterFlow")
