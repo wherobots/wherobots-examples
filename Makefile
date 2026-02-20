@@ -7,27 +7,31 @@
 
 # Configuration
 DOCS_DIR ?= ../docs
+DOCS_BRANCH ?= main
 NOTEBOOKS_OUTPUT_DIR = $(DOCS_DIR)/tutorials/example-notebooks
 DOCS_JSON = $(DOCS_DIR)/docs.json
 
 # Notebook directories to convert
 NOTEBOOK_DIRS = Getting_Started/ Analyzing_Data/ Reading_and_Writing_Data/ Open_Data_Connections/ scala/
 
-.PHONY: help convert update-nav sync-docs preview clean all
+.PHONY: help convert update-nav sync-docs preview preview-branch clean all
 
 help:
 	@echo "Usage: make <target>"
 	@echo ""
 	@echo "Targets:"
-	@echo "  convert        Convert notebooks to MDX files"
-	@echo "  sync-docs      Checkout and pull main branch in docs repo"
-	@echo "  update-nav     Update docs.json navigation"
-	@echo "  preview        Start Mintlify dev server"
-	@echo "  clean          Remove generated MDX files"
-	@echo "  all            Run sync-docs, convert, update-nav, then preview"
+	@echo "  convert            Convert notebooks to MDX files"
+	@echo "  sync-docs          Checkout and pull docs repo branch (default: main)"
+	@echo "  update-nav         Update docs.json navigation"
+	@echo "  preview            Start Mintlify dev server (uses main branch)"
+	@echo "  preview-branch     Preview with a specific docs branch"
+	@echo "                     Usage: make preview-branch DOCS_BRANCH=my-branch"
+	@echo "  clean              Remove generated MDX files"
+	@echo "  all                Run sync-docs, convert, update-nav, then preview"
 	@echo ""
 	@echo "Configuration:"
-	@echo "  DOCS_DIR    Path to docs repo (default: ../docs)"
+	@echo "  DOCS_DIR       Path to docs repo (default: ../docs)"
+	@echo "  DOCS_BRANCH    Docs repo branch to use (default: main)"
 
 convert: clean
 	@echo "Converting notebooks to MDX..."
@@ -44,11 +48,16 @@ update-nav:
 		--notebooks-dir $(NOTEBOOKS_OUTPUT_DIR)
 
 sync-docs:
-	@echo "Syncing docs repo to main branch..."
-	cd $(DOCS_DIR) && git checkout -f main && git pull
+	@echo "Syncing docs repo to $(DOCS_BRANCH) branch..."
+	cd $(DOCS_DIR) && git checkout -f $(DOCS_BRANCH) && git pull
 
 preview: sync-docs convert update-nav
 	@echo "Starting Mintlify dev server..."
+	@echo "Open http://localhost:3000 in your browser"
+	cd $(DOCS_DIR) && npx mintlify dev
+
+preview-branch: sync-docs convert update-nav
+	@echo "Starting Mintlify dev server on $(DOCS_BRANCH) branch..."
 	@echo "Open http://localhost:3000 in your browser"
 	cd $(DOCS_DIR) && npx mintlify dev
 
