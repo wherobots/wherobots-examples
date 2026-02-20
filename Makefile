@@ -13,17 +13,18 @@ DOCS_JSON = $(DOCS_DIR)/docs.json
 # Notebook directories to convert
 NOTEBOOK_DIRS = Getting_Started/ Analyzing_Data/ Reading_and_Writing_Data/ Open_Data_Connections/ scala/
 
-.PHONY: help convert update-nav preview clean all
+.PHONY: help convert update-nav sync-docs-json preview clean all
 
 help:
 	@echo "Usage: make <target>"
 	@echo ""
 	@echo "Targets:"
-	@echo "  convert     Convert notebooks to MDX files"
-	@echo "  update-nav  Update docs.json navigation"
-	@echo "  preview     Start Mintlify dev server"
-	@echo "  clean       Remove generated MDX files"
-	@echo "  all         Run convert, update-nav, then preview"
+	@echo "  convert        Convert notebooks to MDX files"
+	@echo "  sync-docs-json Sync docs.json from docs repo main branch"
+	@echo "  update-nav     Update docs.json navigation"
+	@echo "  preview        Start Mintlify dev server"
+	@echo "  clean          Remove generated MDX files"
+	@echo "  all            Run convert, sync-docs-json, update-nav, then preview"
 	@echo ""
 	@echo "Configuration:"
 	@echo "  DOCS_DIR    Path to docs repo (default: ../docs)"
@@ -42,13 +43,17 @@ update-nav:
 		--docs-json $(DOCS_JSON) \
 		--notebooks-dir $(NOTEBOOKS_OUTPUT_DIR)
 
-preview: convert update-nav
+sync-docs-json:
+	@echo "Syncing docs.json from main branch..."
+	cd $(DOCS_DIR) && git show main:docs.json > docs.json
+
+preview: convert sync-docs-json update-nav
 	@echo "Starting Mintlify dev server..."
 	@echo "Open http://localhost:3000 in your browser"
-	cd $(DOCS_DIR) && mintlify dev
+	cd $(DOCS_DIR) && npx mintlify dev
 
 clean:
 	@echo "Removing generated MDX files..."
 	rm -rf $(NOTEBOOKS_OUTPUT_DIR)
 
-all: convert update-nav preview
+all: convert sync-docs-json update-nav preview
