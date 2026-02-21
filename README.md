@@ -28,31 +28,40 @@ Notebooks in this repository are automatically converted to MDX format and publi
 
 ### Adding a new notebook
 
-When you add a new notebook to this repository, you **must** update the navigation mapping so it appears in the correct category in the documentation:
+When you add a new notebook to this repository, you **must** update the navigation mapping so it appears in the correct location in the documentation. A CI check will block your PR if you add or modify a notebook without updating the config.
 
 1. Edit `.github/workflows/scripts/update_docs_navigation.py`
-2. Add your notebook to the `FILENAME_TO_CATEGORY` dictionary with the appropriate category
+2. Add your notebook to the `NOTEBOOK_LOCATIONS` dictionary with the appropriate navigation path
 3. The filename key should be lowercase with hyphens (e.g., `My_New_Notebook.ipynb` becomes `"my-new-notebook"`)
+4. The value is a list of group names representing the path in the docs navigation hierarchy
 
 Example:
 ```python
-FILENAME_TO_CATEGORY = {
+NOTEBOOK_LOCATIONS = {
     # ... existing entries ...
-    "my-new-notebook": "Analyzing Data",  # Add your notebook here
+    "my-new-notebook": ["Advanced Topics"],  # Top-level group
+    "my-spatial-stats-notebook": ["WherobotsAI", "Spatial Statistics"],  # Nested group
 }
 ```
 
-Available categories:
-- `"Getting Started"`
-- `"Analyzing Data"`
-- `"RasterFlow"`
-- `"Reading and Writing Data"`
-- `"Open Data Connections"`
-- `"Scala"`
+Available top-level groups:
+- `["Getting Started"]`
+- `["Data Connections"]`
+- `["RasterFlow"]`
+- `["Advanced Topics"]`
 
-If you don't add your notebook to the mapping, it will appear under an "Other" category in the documentation.
+Available nested groups:
+- `["WherobotsDB", "Vector Tiles (PMTiles)"]`
+- `["WherobotsAI", "Spatial Statistics"]`
+- `["WherobotsAI"]`
+
+If you don't add your notebook to the mapping, it will be skipped in the navigation and a warning will be printed.
 
 **Note**: Notebooks with the `Raster_Inference_` prefix are excluded from documentation publishing.
+
+### Deleted or renamed notebooks
+
+When notebooks are deleted or renamed, the corresponding MDX files and images in the docs repo are automatically cleaned up by the `cleanup_orphaned_mdx.py` script, which runs before conversion in both the CI workflow and `make preview`/`make all`.
 
 ## Repository structure
 
