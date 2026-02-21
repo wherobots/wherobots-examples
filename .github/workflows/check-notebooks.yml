@@ -1,0 +1,68 @@
+name: Enforce Config Update for Notebooks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  check-notebook-config:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required to compare against the base branch
+
+      # 2. Run the check script
+      - name: Check for ipynb changes without config update
+        env:
+          # Path to config script that should be updated when notebooks are changed
+          CONFIG_FILE_PATH: ".github/workflows/scripts/update_docs_navigation.py"
+          BASE_BRANCH: ${{ github.base_ref }}
+        run: |
+          echo "Comparing HEAD against origin/$BASE_BRANCH..."
+
+          # Get list of changed files between the PR branch and the base branch
+          CHANGED_FILES=$(git diff --name-only origin/$BASE_BRANCH HEAD)
+
+          # Extract filenames without extensions for comparison
+          HAS_IPYNB=$(echo "$CHANGED_FILES" | grep '\.ipynb$' | sed 's/\.ipynb$//' || true)
+
+          # Check if the specific config file was changed
+          # We search specifically for the file path defined in env
+          HAS_CONFIG=$(echo "$CHANGED_FILES" | grep "^$CONFIG_FILE_PATH$" || true)
+
+          # LOGIC:
+          # If notebooks are present AND config is empty (missing), fail the build.
+          if [[ -n "$HAS_IPYNB" ]] && [[ -z "$HAS_CONFIG" ]]; then
+            echo "::error::FAILURE: You added or modified an .ipynb file, but you did not update $CONFIG_FILE_PATH."
+            echo "::error::Please update the configuration file to encompass your notebook changes."
+            exit 1
+          elif [[ -n "$HAS_IPYNB" ]]; then
+            echo "Pass: Notebooks changed, and config file was updated."
+          else
+            echo "Pass: No notebooks were modified in this PR."
+          fi
+
+          # Check if the filenames of modified notebooks already exist in the config file
+          CONFIG_CONTENT=$(cat "$CONFIG_FILE_PATH")
+          MISSING_MAPPING=""
+
+          if [[ -n "$HAS_IPYNB" ]]; then
+            while IFS= read -r notebook; do
+              if ! grep -q "$notebook" <<< "$CONFIG_CONTENT"; then
+                MISSING_MAPPING="$MISSING_MAPPING\n$notebook"
+              fi
+            done <<< "$HAS_IPYNB"
+          fi
+
+          # If there are notebooks without mappings, fail the build
+          if [[ -n "$MISSING_MAPPING" ]]; then
+            echo "::error::FAILURE: The following notebooks are missing mappings in $CONFIG_FILE_PATH:$MISSING_MAPPING"
+            echo "::error::Please update the configuration file to encompass your notebook changes."
+            exit 1
+          fi
