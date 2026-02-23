@@ -7,52 +7,7 @@ and [WherobotsDB](https://wherobots.com/wherobots-db/).
 
 ## Contributing
 
-When raising a PR, make sure to run pre-commit hooks to ensure that the notebooks are cleaned and the `README` is updated.
-
-```bash
-pre-commit run --all-files
-```
-
-Sometimes this will fail and update your notebooks or the `README` file. Generally, you can re-run the
-command and it will pass as the pre-commit hooks will fix the issues it finds.
-
-## Documentation publishing
-
-Notebooks in this repository are automatically converted to MDX format and published to the [Wherobots documentation](https://docs.wherobots.com) site. This happens via a GitHub Actions workflow (`.github/workflows/convert-notebooks.yml`) that runs when notebooks are modified on the `main` branch.
-
-### How it works
-
-1. **Conversion**: The `notebook_to_mdx.py` script converts `.ipynb` files to `.mdx` format, extracting markdown and code cells while generating appropriate frontmatter.
-2. **Navigation**: The `update_docs_navigation.py` script updates the docs navigation structure to include the converted notebooks under "Spatial Analytics Tutorials" > "Example Notebooks".
-3. **Publishing**: A PR is automatically created against the `wherobots/docs` repository with the converted files.
-
-### Adding a new notebook
-
-When you add a new notebook to this repository, you **must** update the navigation mapping so it appears in the correct category in the documentation:
-
-1. Edit `.github/workflows/scripts/update_docs_navigation.py`
-2. Add your notebook to the `FILENAME_TO_CATEGORY` dictionary with the appropriate category
-3. The filename key should be lowercase with hyphens (e.g., `My_New_Notebook.ipynb` becomes `"my-new-notebook"`)
-
-Example:
-```python
-FILENAME_TO_CATEGORY = {
-    # ... existing entries ...
-    "my-new-notebook": "Analyzing Data",  # Add your notebook here
-}
-```
-
-Available categories:
-- `"Getting Started"`
-- `"Analyzing Data"`
-- `"RasterFlow"`
-- `"Reading and Writing Data"`
-- `"Open Data Connections"`
-- `"Scala"`
-
-If you don't add your notebook to the mapping, it will appear under an "Other" category in the documentation.
-
-**Note**: Notebooks with the `Raster_Inference_` prefix are excluded from documentation publishing.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines, pre-commit setup, documentation publishing workflow, local preview instructions, and style guide.
 
 ## Repository structure
 
