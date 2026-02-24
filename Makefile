@@ -33,7 +33,7 @@ help:
 	@echo "  DOCS_DIR       Path to docs repo (default: ../docs)"
 	@echo "  DOCS_BRANCH    Docs repo branch to use (default: main)"
 
-convert: clean
+convert:
 	@echo "Converting notebooks to MDX..."
 	python3 .github/workflows/scripts/notebook_to_mdx.py \
 		$(NOTEBOOK_DIRS) \
