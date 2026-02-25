@@ -37,7 +37,7 @@ cleanup:
 		--exclude-prefix Raster_Inference \
 		-v
 
-convert: clean
+convert:
 	@echo "Converting notebooks to MDX..."
 	python3 .github/workflows/scripts/notebook_to_mdx.py \
 		$(NOTEBOOK_DIRS) \
