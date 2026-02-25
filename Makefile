@@ -7,27 +7,32 @@
 
 # Configuration
 DOCS_DIR ?= ../docs
+DOCS_BRANCH ?= main
 NOTEBOOKS_OUTPUT_DIR = $(DOCS_DIR)/tutorials/example-notebooks
 DOCS_JSON = $(DOCS_DIR)/docs.json
 
 # Dynamically find all directories containing notebooks
 NOTEBOOK_DIRS = $(shell find . -name "*.ipynb" -type f | xargs -I {} dirname {} | sort -u | grep -v ".ipynb_checkpoints")
 
-.PHONY: help cleanup convert update-nav preview clean all
+.PHONY: help cleanup convert update-nav sync-docs preview preview-branch clean all
 
 help:
 	@echo "Usage: make <target>"
 	@echo ""
 	@echo "Targets:"
-	@echo "  cleanup     Remove orphaned MDX files (deleted/renamed notebooks)"
-	@echo "  convert     Convert notebooks to MDX files"
-	@echo "  update-nav  Update docs.json navigation"
-	@echo "  preview     Start Mintlify dev server"
-	@echo "  clean       Remove generated MDX files"
-	@echo "  all         Run cleanup, convert, update-nav, then preview"
+	@echo "  cleanup            Remove orphaned MDX files (deleted/renamed notebooks)"
+	@echo "  convert            Convert notebooks to MDX files"
+	@echo "  sync-docs          Checkout and pull docs repo branch (default: main)"
+	@echo "  update-nav         Update docs.json navigation"
+	@echo "  preview            Start Mintlify dev server (uses main branch)"
+	@echo "  preview-branch     Preview with a specific docs branch"
+	@echo "                     Usage: make preview-branch DOCS_BRANCH=my-branch"
+	@echo "  clean              Remove generated MDX files"
+	@echo "  all                Run sync-docs, cleanup, convert, update-nav, then preview"
 	@echo ""
 	@echo "Configuration:"
-	@echo "  DOCS_DIR    Path to docs repo (default: ../docs)"
+	@echo "  DOCS_DIR       Path to docs repo (default: ../docs)"
+	@echo "  DOCS_BRANCH    Docs repo branch to use (default: main)"
 
 cleanup:
 	@echo "Cleaning up orphaned MDX files..."
@@ -51,13 +56,22 @@ update-nav:
 		--docs-json $(DOCS_JSON) \
 		--notebooks-dir $(NOTEBOOKS_OUTPUT_DIR)
 
-preview: cleanup convert update-nav
+sync-docs:
+	@echo "Syncing docs repo to $(DOCS_BRANCH) branch..."
+	cd $(DOCS_DIR) && git checkout -f $(DOCS_BRANCH) && git pull
+
+preview: sync-docs cleanup convert update-nav
 	@echo "Starting Mintlify dev server..."
 	@echo "Open http://localhost:3000 in your browser"
-	cd $(DOCS_DIR) && mintlify dev
+	cd $(DOCS_DIR) && npx mintlify dev
+
+preview-branch: sync-docs cleanup convert update-nav
+	@echo "Starting Mintlify dev server on $(DOCS_BRANCH) branch..."
+	@echo "Open http://localhost:3000 in your browser"
+	cd $(DOCS_DIR) && npx mintlify dev
 
 clean:
 	@echo "Removing generated MDX files..."
 	rm -rf $(NOTEBOOKS_OUTPUT_DIR)
 
-all: cleanup convert update-nav preview
+all: sync-docs cleanup convert update-nav preview

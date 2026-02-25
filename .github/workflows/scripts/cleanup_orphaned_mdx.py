@@ -8,7 +8,6 @@ notebook was deleted or renamed).
 """
 
 import argparse
-import sys
 from pathlib import Path
 
 
@@ -70,9 +69,8 @@ def cleanup_orphaned_files(
 
         # Remove associated images (prefixed with notebook slug)
         # Images are named: {notebook-slug}-{image-name}.{ext}
-        slug = name.lower()
         if images_dir.exists():
-            for image_file in images_dir.glob(f"{slug}-*"):
+            for image_file in images_dir.glob(f"{name}-*"):
                 if verbose:
                     print(f"Removing orphaned image: {image_file}")
                 if not dry_run:

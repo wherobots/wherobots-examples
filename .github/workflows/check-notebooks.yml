@@ -29,8 +29,8 @@ jobs:
           # Get list of changed files between the PR branch and the base branch
           CHANGED_FILES=$(git diff --name-only origin/$BASE_BRANCH HEAD)
 
-          # Extract filenames without extensions for comparison
-          HAS_IPYNB=$(echo "$CHANGED_FILES" | grep '\.ipynb$' | sed 's/\.ipynb$//' || true)
+          # Extract normalized notebook names (basename, underscores -> dashes, lowercase) for comparison
+          HAS_IPYNB=$(echo "$CHANGED_FILES" | grep '\.ipynb$' | xargs -n1 basename | sed 's/\.ipynb$//' | sed 's/_/-/g' | tr '[:upper:]' '[:lower:]' || true)
 
           # Check if the specific config file was changed
           # We search specifically for the file path defined in env

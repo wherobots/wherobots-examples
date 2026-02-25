@@ -16,6 +16,10 @@ import argparse
 from pathlib import Path
 from typing import Optional
 
+# Allow importing from the same directory as this script, regardless of cwd
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from constants import MODEL_HUB_NOTEBOOKS
+
 
 def to_page_slug(notebook_name: str) -> str:
     """Convert a notebook name to a page slug.
@@ -387,8 +391,9 @@ def convert_notebook_to_mdx(
         or "python"  # Default to python
     )
 
-    # Check if this is a RasterFlow notebook (Model Hub) or regular notebook (Wherobots Cloud)
+    # Check if this is a Model Hub notebook
     notebook_name = notebook_path.name
+    is_model_hub = notebook_path.stem in MODEL_HUB_NOTEBOOKS
     is_rasterflow = notebook_name.startswith("RasterFlow")
 
     # Build MDX content
@@ -414,7 +419,7 @@ def convert_notebook_to_mdx(
     mdx_parts.append("To run this notebook interactively:")
     mdx_parts.append("")
 
-    if is_rasterflow:
+    if is_model_hub:
         mdx_parts.append(
             "1. Go to the [**Wherobots Model Hub**](https://www.wherobots.com/model-hub)."
         )

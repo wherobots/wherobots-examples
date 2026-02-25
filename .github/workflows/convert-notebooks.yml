@@ -9,6 +9,7 @@ on:
       - '.github/workflows/convert-notebooks.yml'
       - '.github/workflows/scripts/notebook_to_mdx.py'
       - '.github/workflows/scripts/cleanup_orphaned_mdx.py'
+      - '.github/workflows/scripts/update_docs_navigation.py'
   workflow_dispatch:
 
 permissions:
