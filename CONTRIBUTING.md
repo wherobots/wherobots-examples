@@ -56,31 +56,40 @@ Notebooks in this repository are automatically converted to MDX format and publi
 
 ### Adding a new notebook
 
-When you add a new notebook to this repository, you **must** update the navigation mapping so it appears in the correct category in the documentation:
+When you add a new notebook to this repository, you **must** update the navigation mapping so it appears in the correct location in the documentation. A CI check will block your PR if you add or modify a notebook without updating the config.
 
 1. Edit `.github/workflows/scripts/update_docs_navigation.py`
-2. Add your notebook to the `FILENAME_TO_CATEGORY` dictionary with the appropriate category
+2. Add your notebook to the `NOTEBOOK_LOCATIONS` dictionary with the appropriate navigation path
 3. The filename key should be lowercase with hyphens (e.g., `My_New_Notebook.ipynb` becomes `"my-new-notebook"`)
+4. The value is a list of group names representing the path in the docs navigation hierarchy
 
 Example:
 ```python
-FILENAME_TO_CATEGORY = {
+NOTEBOOK_LOCATIONS = {
     # ... existing entries ...
-    "my-new-notebook": "Analyzing Data",  # Add your notebook here
+    "my-new-notebook": ["Advanced Topics"],  # Top-level group
+    "my-spatial-stats-notebook": ["WherobotsAI", "Spatial Statistics"],  # Nested group
 }
 ```
 
-Available categories:
-- `"Getting Started"`
-- `"Analyzing Data"`
-- `"RasterFlow"`
-- `"Reading and Writing Data"`
-- `"Open Data Connections"`
-- `"Scala"`
+Available top-level groups:
+- `["Getting Started"]`
+- `["Data Connections"]`
+- `["RasterFlow"]`
+- `["Advanced Topics"]`
 
-If you don't add your notebook to the mapping, it will appear under an "Other" category in the documentation.
+Available nested groups:
+- `["WherobotsDB", "Vector Tiles (PMTiles)"]`
+- `["WherobotsAI", "Spatial Statistics"]`
+- `["WherobotsAI"]`
+
+If you don't add your notebook to the mapping, it will be skipped in the navigation and a warning will be printed.
 
 **Note**: Notebooks with the `Raster_Inference_` prefix are excluded from documentation publishing.
+
+### Deleted or renamed notebooks
+
+When notebooks are deleted or renamed, the corresponding MDX files and images in the docs repo are cleaned up by the `cleanup_orphaned_mdx.py` script. This cleanup runs automatically before conversion in the CI workflow and when using `make preview`/`make all`, can be invoked independently via `make cleanup`, and is not executed when running `make convert` alone.
 
 ## Local preview
 
@@ -96,12 +105,13 @@ You can preview how notebooks will look on the docs site locally using the Makef
 
 | Target | Description |
 |---|---|
-| `make preview` | Full local preview workflow. Syncs the docs repo to `main`, converts notebooks to MDX, updates navigation, and starts the Mintlify dev server at `http://localhost:3000`. |
+| `make preview` | Full local preview workflow. Syncs the docs repo to `main`, cleans up orphaned MDX, converts notebooks to MDX, updates navigation, and starts the Mintlify dev server at `http://localhost:3000`. |
 | `make preview-branch DOCS_BRANCH=<branch>` | Same as `preview` but checks out a specific docs repo branch instead of `main`. Useful when redesigning the tutorials section on a feature branch. |
-| `make convert` | Converts notebooks to MDX files in the docs repo. Cleans previous output first. |
+| `make cleanup` | Removes orphaned MDX files and images from the docs repo (from deleted or renamed notebooks). |
+| `make convert` | Converts notebooks to MDX files in the docs repo. Overwrites existing files in place. |
 | `make update-nav` | Updates `docs.json` navigation to include converted notebooks. |
 | `make sync-docs` | Checks out and pulls the target branch (default: `main`) in the docs repo. |
-| `make clean` | Removes generated MDX files from the docs repo. |
+| `make clean` | Removes all generated MDX files from the docs repo. |
 
 ### Configuration
 
