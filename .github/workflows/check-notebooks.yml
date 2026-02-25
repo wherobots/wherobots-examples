@@ -29,8 +29,15 @@ jobs:
           # Get list of changed files between the PR branch and the base branch
           CHANGED_FILES=$(git diff --name-only origin/$BASE_BRANCH HEAD)
 
-          # Extract normalized notebook names (basename, underscores -> dashes, lowercase) for comparison
-          HAS_IPYNB=$(echo "$CHANGED_FILES" | grep '\.ipynb$' | xargs -n1 basename | sed 's/\.ipynb$//' | sed 's/_/-/g' | tr '[:upper:]' '[:lower:]' || true)
+          # Extract normalized notebook names for added/modified notebooks only
+          # (exclude deletions — deleted notebooks don't need mappings)
+          # Transforms: Getting_Started/Part_1_Loading_Data.ipynb -> part-1-loading-data
+          HAS_IPYNB=$(git diff --name-only --diff-filter=d origin/$BASE_BRANCH HEAD \
+            | grep '\.ipynb$' \
+            | xargs -n1 basename \
+            | sed 's/\.ipynb$//' \
+            | sed 's/_/-/g' \
+            | tr '[:upper:]' '[:lower:]' || true)
 
           # Check if the specific config file was changed
           # We search specifically for the file path defined in env
@@ -54,8 +61,8 @@ jobs:
 
           if [[ -n "$HAS_IPYNB" ]]; then
             while IFS= read -r notebook; do
-              if ! grep -q "$notebook" <<< "$CONFIG_CONTENT"; then
-                MISSING_MAPPING="$MISSING_MAPPING\n$notebook"
+              if ! grep -q "\"$notebook\":" <<< "$CONFIG_CONTENT"; then
+                MISSING_MAPPING="${MISSING_MAPPING}"$'\n'"  - $notebook"
               fi
             done <<< "$HAS_IPYNB"
           fi
