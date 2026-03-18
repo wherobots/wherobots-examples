@@ -521,12 +521,6 @@ def main():
         "-o", "--output", required=True, help="Output directory for MDX files"
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
-    parser.add_argument(
-        "--exclude-prefix",
-        default="Raster_Inference",
-        help="Exclude notebooks with this filename prefix",
-    )
-
     args = parser.parse_args()
     output_dir = Path(args.output)
 
@@ -538,12 +532,6 @@ def main():
             notebooks.append(path)
         elif path.is_dir():
             notebooks.extend(path.rglob("*.ipynb"))
-
-    # Filter out excluded notebooks
-    if args.exclude_prefix:
-        notebooks = [
-            nb for nb in notebooks if not nb.name.startswith(args.exclude_prefix)
-        ]
 
     if not notebooks:
         print("No notebooks found to convert")

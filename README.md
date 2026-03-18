@@ -29,11 +29,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines, pre-commit s
 |   |-- RasterFlow_FTW.ipynb
 |   |-- RasterFlow_S2_Mosaic.ipynb
 |   |-- RasterFlow_Tile2Net.ipynb
-|   |-- Raster_Inference_Bring_Your_Own_Model.ipynb
-|   |-- Raster_Inference_Classification.ipynb
-|   |-- Raster_Inference_Object_Detection.ipynb
-|   |-- Raster_Inference_Segmentation.ipynb
-|   |-- Raster_Inference_Text_To_Segments_Airplanes.ipynb
 |   `-- Zonal_Stats_ESAWorldCover_Texas.ipynb
 |-- CONTRIBUTING.md
 |-- Getting_Started

@@ -80,8 +80,6 @@ Available categories:
 
 If you don't add your notebook to the mapping, it will appear under an "Other" category in the documentation.
 
-**Note**: Notebooks with the `Raster_Inference_` prefix are excluded from documentation publishing.
-
 ## Local preview
 
 You can preview how notebooks will look on the docs site locally using the Makefile targets. This requires the [`wherobots/docs`](https://github.com/wherobots/docs) repo cloned alongside this repo (at `../docs` by default).
