@@ -28,6 +28,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines, pre-commit s
 |   |-- RasterFlow_Chesapeake.ipynb
 |   |-- RasterFlow_FTW.ipynb
 |   |-- RasterFlow_S2_Mosaic.ipynb
+|   |-- RasterFlow_SAM3.ipynb
 |   |-- RasterFlow_Tile2Net.ipynb
 |   |-- Raster_Inference_Bring_Your_Own_Model.ipynb
 |   |-- Raster_Inference_Classification.ipynb
