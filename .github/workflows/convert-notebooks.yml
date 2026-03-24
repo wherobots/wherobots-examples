@@ -43,7 +43,6 @@ jobs:
             wherobots-examples/Open_Data_Connections/ \
             wherobots-examples/scala/ \
             -o docs/tutorials/example-notebooks \
-            --exclude-prefix Raster_Inference \
             -v
 
       - name: Update docs.json navigation

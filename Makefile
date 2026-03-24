@@ -38,7 +38,6 @@ convert: clean
 	python3 .github/workflows/scripts/notebook_to_mdx.py \
 		$(NOTEBOOK_DIRS) \
 		-o $(NOTEBOOKS_OUTPUT_DIR) \
-		--exclude-prefix Raster_Inference \
 		-v
 
 update-nav:
