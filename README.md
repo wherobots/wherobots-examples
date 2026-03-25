@@ -28,6 +28,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines, pre-commit s
 |   |-- RasterFlow_Chesapeake.ipynb
 |   |-- RasterFlow_FTW.ipynb
 |   |-- RasterFlow_S2_Mosaic.ipynb
+|   |-- RasterFlow_SAM3.ipynb
 |   |-- RasterFlow_Tile2Net.ipynb
 |   `-- Zonal_Stats_ESAWorldCover_Texas.ipynb
 |-- CONTRIBUTING.md
