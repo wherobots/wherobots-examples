@@ -22,6 +22,7 @@ will pass as the pre-commit hooks will fix the issues it finds.
 .
 |-- Analyzing_Data
 |   |-- Bring_Your_Own_Model_Raster_Inference.ipynb
+|   |-- California_Coastal_Flood_Risk_Analysis.ipynb
 |   |-- Clustering_DBSCAN.ipynb
 |   |-- GPS_Map_Matching.ipynb
 |   |-- Getis_Ord_Gi*.ipynb
