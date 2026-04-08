@@ -14,7 +14,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines, pre-commit s
 ```
 .
 |-- Analyzing_Data
-|   |-- Bring_Your_Own_Model_Raster_Inference.ipynb
 |   |-- California_Coastal_Flood_Risk_Analysis.ipynb
 |   |-- Clustering_DBSCAN.ipynb
 |   |-- GPS_Map_Matching.ipynb
