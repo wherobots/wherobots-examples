@@ -7,14 +7,7 @@ and [WherobotsDB](https://wherobots.com/wherobots-db/).
 
 ## Contributing
 
-When raising a PR, make sure to run pre-commit hooks to the notebooks are cleaned and the README is updated.
-
-```bash
-pre-commit run --all-files
-```
-
-Sometimes this will fail and update your notebooks or the README file. Generally, you can rerun the command and it
-will pass as the pre-commit hooks will fix the issues it finds.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines, pre-commit setup, documentation publishing workflow, local preview instructions, and style guide.
 
 ## Repository structure
 
@@ -29,10 +22,16 @@ will pass as the pre-commit hooks will fix the issues it finds.
 |   |-- Isochrones.ipynb
 |   |-- K_Nearest_Neighbor_Join.ipynb
 |   |-- Local_Outlier_Factor.ipynb
-|   |-- Object_Detection.ipynb
-|   |-- Raster_Classification.ipynb
-|   |-- Raster_Segmentation.ipynb
-|   |-- Raster_Text_To_Segments_Airplanes.ipynb
+|   |-- PMTiles-railroad.ipynb
+|   |-- RasterFlow_Bring_Your_Own_Model.ipynb
+|   |-- RasterFlow_Bring_Your_Own_Rasters_NAIP.ipynb
+|   |-- RasterFlow_CHM.ipynb
+|   |-- RasterFlow_ChangeDetection.ipynb
+|   |-- RasterFlow_Chesapeake.ipynb
+|   |-- RasterFlow_FTW.ipynb
+|   |-- RasterFlow_S2_Mosaic.ipynb
+|   |-- RasterFlow_SAM3.ipynb
+|   |-- RasterFlow_Tile2Net.ipynb
 |   `-- Zonal_Stats_ESAWorldCover_Texas.ipynb
 |-- CONTRIBUTING.md
 |-- Getting_Started
@@ -40,6 +39,7 @@ will pass as the pre-commit hooks will fix the issues it finds.
 |   |-- Part_2_Reading_Spatial_Files.ipynb
 |   |-- Part_3_Accelerating_Geospatial_Datasets.ipynb
 |   `-- Part_4_Spatial_Joins.ipynb
+|-- Makefile
 |-- Open_Data_Connections
 |   |-- ESA_WorldCover.ipynb
 |   |-- Foursquare_Places.ipynb
@@ -48,7 +48,8 @@ will pass as the pre-commit hooks will fix the issues it finds.
 |-- Reading_and_Writing_Data
 |   |-- Loading_Common_Spatial_File_Types.ipynb
 |   |-- Map_Tile_Generation.ipynb
-|   `-- STAC_Reader.ipynb
+|   |-- STAC_Reader.ipynb
+|   `-- Unity_Catalog_Delta_Tables.ipynb
 `-- scala
     |-- Getting_Started.ipynb
     `-- packaging-example-project
