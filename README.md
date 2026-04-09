@@ -24,6 +24,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines, pre-commit s
 |   |-- PMTiles-railroad.ipynb
 |   |-- RasterFlow_Bring_Your_Own_Model.ipynb
 |   |-- RasterFlow_Bring_Your_Own_Rasters_NAIP.ipynb
+|   |-- RasterFlow_CHM-Deforestation-Change.ipynb
 |   |-- RasterFlow_CHM.ipynb
 |   |-- RasterFlow_ChangeDetection.ipynb
 |   |-- RasterFlow_Chesapeake.ipynb
