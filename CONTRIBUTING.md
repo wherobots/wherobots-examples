@@ -56,6 +56,16 @@ Notebooks in this repository are automatically converted to MDX format and publi
 
 ### Adding a new notebook
 
+#### Notebooks must be self-contained
+
+Every notebook must be fully self-contained within its `.ipynb` file. The Wherobots VS Code extension downloads individual notebook files and sends them to a remote Jupyter server for execution — it does not clone the repository or transfer any co-located files. This means:
+
+- **No local file reads in code cells.** Do not use `open()`, `json.load()`, `pd.read_csv()`, or similar to load files from `assets/` or other repo paths. If you need a configuration dict (e.g. a Kepler map config), define it inline as a Python literal in the code cell.
+- **No local image paths in markdown cells.** Do not reference images via relative paths like `./assets/img/banner.png` or `../assets/img/header-logo.png`. Instead, use Jupyter's cell attachment format, which embeds images as base64 in the cell metadata. In the Jupyter UI, you can drag-and-drop or paste an image into a markdown cell to create an attachment automatically. The resulting markdown should look like `![alt text](attachment:filename.png)`.
+- **Remote data is fine.** References to S3 paths, HTTP URLs, or data loaded from the Wherobots catalog are not affected by this constraint.
+
+#### Documentation navigation
+
 When you add a new notebook to this repository, you **must** update the navigation mapping so it appears in the correct category in the documentation:
 
 1. Edit `.github/workflows/scripts/update_docs_navigation.py`
@@ -162,7 +172,8 @@ When writing example notebooks, follow these guidelines.
 
 - Opening image
   - If this is a solution notebook, start with a banner that repeats the imagery used for the notebook's thumbnail. It should be about 1200x220 px. (See [Generate PMTiles using Wherobots](https://github.com/wherobots/wherobots-examples/blob/main/Analyzing_Data/PMTiles-railroad.ipynb) for an example.)
-  - Otherwise, start with this small logo: `![Wherobots logo](../assets/img/header-logo.png)`
+  - Otherwise, start with the Wherobots logo (available at `assets/img/header-logo.png` in the repo root).
+  - All images must be embedded as Jupyter cell attachments, not as relative file paths. Drag-and-drop or paste the image into the markdown cell in the Jupyter UI, which produces `![alt](attachment:filename.png)` syntax automatically.
 - Headings
   - Use `#` (H1) once in a notebook, as the title that immediately follows the opening image.
   - Use `##` (H2) for most section headings, and `###` (H3) if a second level makes sense.
