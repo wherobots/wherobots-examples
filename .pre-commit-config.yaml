@@ -8,6 +8,12 @@ repos:
         files: README.md
         stages: [ pre-commit ]
         always_run: true
+      - id: check-notebook-self-contained
+        name: Check notebooks are self-contained
+        entry: python3 ./scripts/check_notebook_self_contained.py
+        language: system
+        files: '\.ipynb$'
+        stages: [ pre-commit ]
   - repo: https://github.com/srstevenson/nb-clean
     rev: 4.0.1
     hooks:
