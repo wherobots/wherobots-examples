@@ -32,6 +32,23 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines, pre-commit s
 |   |-- RasterFlow_SAM3.ipynb
 |   |-- RasterFlow_Tile2Net.ipynb
 |   `-- Zonal_Stats_ESAWorldCover_Texas.ipynb
+|-- Business_Cases
+|   |-- backend_warehouse_network_optimization.ipynb
+|   |-- frontend_commodity_supply_chain.ipynb
+|   |-- frontend_insurance_exposure_viz.ipynb
+|   |-- frontend_site_selection_map.ipynb
+|   |-- marketing_commodity_edge.ipynb
+|   |-- marketing_fleet_intelligence.ipynb
+|   |-- product_csv_to_risk_analysis.ipynb
+|   |-- product_rasterflow_field_detection.ipynb
+|   |-- sa_catastrophe_exposure_model.ipynb
+|   |-- sa_commodity_intelligence_pipeline.ipynb
+|   |-- sa_fleet_geofence_pipeline.ipynb
+|   |-- sa_land_change_detection.ipynb
+|   |-- sa_pivot_irrigation_gap_analysis.ipynb
+|   |-- sa_site_selection_scoring.ipynb
+|   |-- sales_hedge_fund_alpha.ipynb
+|   `-- sales_starbucks_competitor_analysis_LA.ipynb
 |-- CONTRIBUTING.md
 |-- Getting_Started
 |   |-- Part_1_Loading_Data.ipynb
