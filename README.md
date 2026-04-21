@@ -37,6 +37,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines, pre-commit s
 |   |-- frontend_commodity_supply_chain.ipynb
 |   |-- frontend_insurance_exposure_viz.ipynb
 |   |-- frontend_site_selection_map.ipynb
+|   |-- images
+|   |   `-- backend_warehouse_network_optimization_header_image_.png
 |   |-- marketing_commodity_edge.ipynb
 |   |-- marketing_fleet_intelligence.ipynb
 |   |-- product_csv_to_risk_analysis.ipynb
