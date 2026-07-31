@@ -46,6 +46,7 @@ NOTEBOOK_LOCATIONS: dict[str, list[str]] = {
     "rasterflow-changedetection": ["RasterFlow"],
     "rasterflow-ftw": ["RasterFlow"],
     "rasterflow-s2-mosaic": ["RasterFlow"],
+    "rasterflow-naip-mosaic": ["RasterFlow"],
     "rasterflow-tile2net": ["RasterFlow"],
     "rasterflow-bring-your-own-rasters-naip": ["RasterFlow"],
     "rasterflow-bring-your-own-model": ["RasterFlow"],
