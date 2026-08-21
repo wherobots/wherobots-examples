@@ -46,6 +46,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines, pre-commit s
 |   |-- NOAA_SWDI.ipynb
 |   `-- Overture_Maps.ipynb
 |-- Reading_and_Writing_Data
+|   |-- Iceberg_V3_Geometry.ipynb
 |   |-- Loading_Common_Spatial_File_Types.ipynb
 |   |-- Map_Tile_Generation.ipynb
 |   |-- STAC_Reader.ipynb
