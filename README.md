@@ -37,7 +37,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines, pre-commit s
 |   |-- images
 |   |   |-- backend_warehouse_network_optimization_header_image.png
 |   |   `-- sa_fleet_geofence_pipeline_header_image.png
-|   |-- marketing_commodity_edge.ipynb
 |   |-- sa_catastrophe_exposure_model.ipynb
 |   |-- sa_fleet_geofence_pipeline.ipynb
 |   |-- sa_site_selection_scoring.ipynb
