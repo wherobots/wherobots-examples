@@ -5,4 +5,5 @@ MODEL_HUB_NOTEBOOKS = {
     "RasterFlow_FTW",
     "RasterFlow_Tile2Net",
     "RasterFlow_Chesapeake",
+    "RasterFlow_SAM3",
 }
