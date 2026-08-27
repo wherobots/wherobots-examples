@@ -421,7 +421,7 @@ def convert_notebook_to_mdx(
 
     if is_model_hub:
         mdx_parts.append(
-            "1. Go to the [**Wherobots Model Hub**](https://www.wherobots.com/model-hub)."
+            "1. Go to the [**Wherobots Model Hub**](https://www.cloud.wherobots.com/model-hub) and log in if needed."
         )
         mdx_parts.append("2. Select the specific notebook you wish to run.")
         mdx_parts.append("3. Click **Run Model in Notebook**.")
