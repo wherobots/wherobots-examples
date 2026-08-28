@@ -52,6 +52,7 @@ NOTEBOOK_LOCATIONS: dict[str, list[str]] = {
     "rasterflow-bring-your-own-model": ["RasterFlow"],
     # Advanced Topics group (top-level)
     "isochrones": ["Advanced Topics"],
+    "california-coastal-flood-risk-analysis": ["Advanced Topics"],
     "zonal-stats-esaworldcover-texas": ["Advanced Topics"],
     "loading-common-spatial-file-types": ["Advanced Topics"],
     "map-tile-generation": ["Advanced Topics"],
