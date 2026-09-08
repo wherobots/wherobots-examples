@@ -405,9 +405,9 @@ def convert_notebook_to_mdx(
     mdx_parts.append("---")
     mdx_parts.append("")
 
-    # Add Private Preview badge for RasterFlow notebooks only
+    # Add Public Preview badge for RasterFlow notebooks only
     if is_rasterflow:
-        mdx_parts.append('<Badge color="purple">Private Preview</Badge>')
+        mdx_parts.append('<Badge color="purple">Public Preview</Badge>')
         mdx_parts.append("")
 
     # Add Tip callout about running the notebook interactively
