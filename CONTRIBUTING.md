@@ -26,11 +26,13 @@ This will install pre-commit and set up the git hooks defined in our `.pre-commi
 
 ### Pre-commit Hooks
 
-We use two primary hooks:
+We use three hooks:
 
 1. **Notebook Cleaning**: This hook removes execution counts and outputs from notebooks to keep diffs clean and focused on content changes rather than execution artifacts.
 
 2. **README Generator**: This hook automatically updates the README.md file based on the notebook file structure, ensuring that our documentation accurately reflects the current state of available examples.
+
+3. **GeoPandas / DuckDB Guard** (`forbid-geopandas-duckdb`): This hook fails if a notebook or Python file imports GeoPandas or DuckDB (or uses `rasterflow_remote`'s GeoPandas-backed `mosaic_index_gdf`; use `mosaic_index_df`). The examples showcase WherobotsDB, so spatial data handling stays on Sedona DataFrames and Spatial SQL; see the [style guide](#code-blocks-and-style). The same check runs in CI on every pull request.
 
 You can run the hooks manually on all files with:
 
@@ -199,3 +201,4 @@ For example:
 - Comments should be one short line and support or expand what's in prose, as opposed to repeating it.
 - Whenever possible, cells should output something. If the cell isn't designed to output already (e.g. a map), provide context or confirmation of what happened with calls like `show`, `count`, or `printSchema`.
 - Always use [`wkls`](https://github.com/wherobots/wkls) instead of hard-coding admin boundaries.
+- Use WherobotsDB (Sedona DataFrames and Spatial SQL) to read, write, analyze, and prepare spatial data for display. Don't use GeoPandas: the `forbid-geopandas` pre-commit hook (also run in CI) fails on `import geopandas` and on `rasterflow_remote`'s `mosaic_index_gdf` accessor. Read GeoParquet outputs with `sedona.read.format("geoparquet")` and pull coordinates out with `ST_X`/`ST_Y` for `matplotlib` plots.

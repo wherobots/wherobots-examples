@@ -54,7 +54,10 @@ jobs:
       - name: Clean notebooks
         run: pre-commit run nb-clean --all-files
       
+      - name: Check for GeoPandas / DuckDB usage
+        run: pre-commit run forbid-geopandas-duckdb --all-files
+
       - name: Run remaining pre-commit hooks
         run: |
           # This will run any other hooks not explicitly run above
-          SKIP=update-repo-structure,nb-clean pre-commit run --all-files
+          SKIP=update-repo-structure,nb-clean,forbid-geopandas-duckdb pre-commit run --all-files
