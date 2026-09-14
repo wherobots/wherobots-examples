@@ -44,6 +44,52 @@ Or on staged files only:
 pre-commit run
 ```
 
+## Notebook execution gate
+
+Pull requests that change **code cells** in a notebook are gated on a successful Wherobots job run.
+The `Run Changed Notebooks` workflow (`.github/workflows/test-changed-notebooks.yml`) converts each
+affected notebook to a Python script and runs it on a `tiny` runtime. If the run fails, the check goes
+red and the failure is posted as a comment on the PR with the relevant portion of the job run log.
+
+The intent is simple: a notebook merges only after the code in it has actually been executed.
+
+### What triggers a run
+
+| Change | Job run? |
+|---|---|
+| A code cell's source changed | Yes |
+| Only markdown cells changed (prose, images, headings) | No |
+| A new notebook was added | Yes |
+| A notebook under `scala/` changed | No (different kernel; not covered by this gate) |
+
+The comparison is on code cell source only, so reformatting prose or swapping a banner image
+does not spend compute.
+
+### If the check fails
+
+Read the PR comment first -- it contains the job run ID and the traceback from the log. Common causes:
+
+- **A genuine bug in the notebook.** Fix the code and push; the check re-runs.
+- **The notebook depends on interactive state.** Job runs are headless. Visualization cells
+  (`SedonaKepler`, `SedonaPyDeck`, `create_map`, `gdf.plot`) are stripped before execution by
+  `.github/workflows/config/nbconvert_config.py`, but a cell that *reads* a variable defined only
+  inside a stripped cell will fail. Keep data logic out of visualization cells.
+- **A transient cloud error.** Re-run the workflow from the Actions tab.
+
+To reproduce locally, convert and submit the same way CI does:
+
+```bash
+export WHEROBOTS_API_KEY=...
+python .github/workflows/scripts/run_changed_notebooks.py --base-sha main --runtime tiny
+```
+
+This requires `nbconvert` and the [Wherobots CLI](https://github.com/wherobots/wherobots-cli) on your PATH.
+
+### Setup requirement
+
+The workflow needs a `WHEROBOTS_API_KEY` repository secret. Use a service principal key rather than a
+personal one so the gate does not break when someone leaves the team.
+
 ## Documentation publishing
 
 Notebooks in this repository are automatically converted to MDX format and published to the [Wherobots documentation](https://docs.wherobots.com) site. This happens via a GitHub Actions workflow (`.github/workflows/convert-notebooks.yml`) that runs when notebooks are modified on the `main` branch.
