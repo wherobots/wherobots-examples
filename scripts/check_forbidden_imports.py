@@ -3,8 +3,10 @@
 Fail if any notebook or Python file in the repository uses GeoPandas or DuckDB.
 
 These examples exist to showcase WherobotsDB (Apache Sedona). GeoPandas and DuckDB
-overlap with that functionality, so notebooks should stay on Sedona DataFrames and
-Spatial SQL for reading, writing, analyzing, and visualizing spatial data.
+overlap with that functionality, so notebooks should stay on WherobotsDB for reading,
+writing, analyzing, and visualizing spatial data: Spatial SQL, Sedona DataFrames, or the
+GeoPandas API on WherobotsDB (``import sedona.spark.geopandas as gpd``), which is not
+flagged here.
 
 Checked:
   * ``import geopandas`` / ``from geopandas import ...`` and ``import duckdb`` /
@@ -24,11 +26,11 @@ from pathlib import Path
 FORBIDDEN = [
     (
         re.compile(r"^\s*(import\s+geopandas\b|from\s+geopandas\b)", re.MULTILINE),
-        "imports geopandas; use Sedona DataFrames / Spatial SQL instead",
+        "imports geopandas; use the GeoPandas API on WherobotsDB (`import sedona.spark.geopandas as gpd`) or Spatial SQL instead",
     ),
     (
         re.compile(r"^\s*(import\s+duckdb\b|from\s+duckdb\b)", re.MULTILINE),
-        "imports duckdb; use Sedona DataFrames / Spatial SQL instead",
+        "imports duckdb; use Spatial SQL or the GeoPandas API on WherobotsDB instead",
     ),
     (
         re.compile(r"\.mosaic_index_gdf\b"),

@@ -32,7 +32,7 @@ We use three hooks:
 
 2. **README Generator**: This hook automatically updates the README.md file based on the notebook file structure, ensuring that our documentation accurately reflects the current state of available examples.
 
-3. **GeoPandas / DuckDB Guard** (`forbid-geopandas-duckdb`): This hook fails if a notebook or Python file imports GeoPandas or DuckDB (or uses `rasterflow_remote`'s GeoPandas-backed `mosaic_index_gdf`; use `mosaic_index_df`). The examples showcase WherobotsDB, so spatial data handling stays on Sedona DataFrames and Spatial SQL; see the [style guide](#code-blocks-and-style). The same check runs in CI on every pull request.
+3. **GeoPandas / DuckDB Guard** (`forbid-geopandas-duckdb`): This hook fails if a notebook or Python file imports GeoPandas or DuckDB (or uses `rasterflow_remote`'s GeoPandas-backed `mosaic_index_gdf`; use `mosaic_index_df`). The examples showcase WherobotsDB, so spatial data handling stays on WherobotsDB: Spatial SQL, Sedona DataFrames, or the GeoPandas API on WherobotsDB (`import sedona.spark.geopandas as gpd`), which the hook does not flag; see the [style guide](#code-blocks-and-style). The same check runs in CI on every pull request.
 
 You can run the hooks manually on all files with:
 
@@ -201,4 +201,4 @@ For example:
 - Comments should be one short line and support or expand what's in prose, as opposed to repeating it.
 - Whenever possible, cells should output something. If the cell isn't designed to output already (e.g. a map), provide context or confirmation of what happened with calls like `show`, `count`, or `printSchema`.
 - Always use [`wkls`](https://github.com/wherobots/wkls) instead of hard-coding admin boundaries.
-- Use WherobotsDB (Sedona DataFrames and Spatial SQL) to read, write, analyze, and prepare spatial data for display. Don't use GeoPandas: the `forbid-geopandas` pre-commit hook (also run in CI) fails on `import geopandas` and on `rasterflow_remote`'s `mosaic_index_gdf` accessor. Read GeoParquet outputs with `sedona.read.format("geoparquet")` and pull coordinates out with `ST_X`/`ST_Y` for `matplotlib` plots.
+- Use WherobotsDB to read, write, analyze, and prepare spatial data for display. For DataFrame-style Python, use the GeoPandas API on WherobotsDB (`import sedona.spark.geopandas as gpd`): it keeps GeoPandas syntax such as `gpd.read_parquet(path)`, `len(gdf)`, and `gdf["col"].describe()` while running on WherobotsDB. Use Spatial SQL where it reads more clearly. Don't import `geopandas` or `duckdb` directly: the `forbid-geopandas-duckdb` pre-commit hook (also run in CI) fails on those imports and on `rasterflow_remote`'s `mosaic_index_gdf` accessor. Pull coordinates out with `ST_X`/`ST_Y` for `matplotlib` plots.
