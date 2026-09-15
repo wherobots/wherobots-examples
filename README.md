@@ -33,6 +33,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines, pre-commit s
 |   |-- RasterFlow_SAM3.ipynb
 |   |-- RasterFlow_Tile2Net.ipynb
 |   `-- Zonal_Stats_ESAWorldCover_Texas.ipynb
+|-- Business_Cases
+|   |-- backend_warehouse_network_optimization.ipynb
+|   `-- images
+|       `-- backend_warehouse_network_optimization_header_image.png
 |-- CONTRIBUTING.md
 |-- Getting_Started
 |   |-- Part_1_Loading_Data.ipynb
