@@ -33,6 +33,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines, pre-commit s
 |   |-- RasterFlow_SAM3.ipynb
 |   |-- RasterFlow_Tile2Net.ipynb
 |   `-- Zonal_Stats_ESAWorldCover_Texas.ipynb
+|-- Business_Cases
+|   |-- images
+|   |   `-- sales_starbucks_map.png
+|   `-- sales_starbucks_competitor_analysis_LA.ipynb
 |-- CONTRIBUTING.md
 |-- Getting_Started
 |   |-- Part_1_Loading_Data.ipynb
