@@ -23,11 +23,11 @@ from pathlib import Path
 
 FORBIDDEN = [
     (
-        re.compile(r"^\s*(import\s+geopandas\b|from\s+geopandas\b)", re.MULTILINE),
+        re.compile(r"(?:^|[;:])\s*(import\s+geopandas\b|from\s+geopandas\b)", re.MULTILINE),
         "imports geopandas; use Sedona DataFrames / Spatial SQL instead",
     ),
     (
-        re.compile(r"^\s*(import\s+duckdb\b|from\s+duckdb\b)", re.MULTILINE),
+        re.compile(r"(?:^|[;:])\s*(import\s+duckdb\b|from\s+duckdb\b)", re.MULTILINE),
         "imports duckdb; use Sedona DataFrames / Spatial SQL instead",
     ),
     (
@@ -36,7 +36,8 @@ FORBIDDEN = [
     ),
 ]
 
-FENCED_CODE = re.compile(r"```[^\n]*\n(.*?)```", re.DOTALL)
+# Fenced code blocks in markdown, opened with ``` or ~~~ and closed with the same fence
+FENCED_CODE = re.compile(r"^(```|~~~)[^\n]*\n(.*?)^\1", re.DOTALL | re.MULTILINE)
 
 
 def code_snippets(path: Path):
@@ -51,7 +52,7 @@ def code_snippets(path: Path):
         if cell.get("cell_type") == "code":
             yield f"cell {index}", source
         elif cell.get("cell_type") == "markdown":
-            for block in FENCED_CODE.findall(source):
+            for _fence, block in FENCED_CODE.findall(source):
                 yield f"cell {index} (markdown code block)", block
 
 
