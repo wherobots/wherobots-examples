@@ -8,6 +8,12 @@ repos:
         files: README.md
         stages: [ pre-commit ]
         always_run: true
+      - id: forbid-geopandas-duckdb
+        name: Forbid GeoPandas and DuckDB usage (use WherobotsDB instead)
+        entry: python3 scripts/check_forbidden_imports.py
+        language: system
+        files: '\.(ipynb|py)$'
+        stages: [ pre-commit ]
   - repo: https://github.com/srstevenson/nb-clean
     rev: 4.0.1
     hooks:
