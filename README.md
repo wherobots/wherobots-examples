@@ -15,6 +15,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines, pre-commit s
 .
 |-- Analyzing_Data
 |   |-- California_Coastal_Flood_Risk_Analysis.ipynb
+|   |-- Cecil_Crop_Type_Labeling.ipynb
+|   |-- Cecil_Hansen_Forest_Loss.ipynb
+|   |-- Cecil_Nature_Risk_Screening.ipynb
 |   |-- Clustering_DBSCAN.ipynb
 |   |-- GPS_Map_Matching.ipynb
 |   |-- Getis_Ord_Gi*.ipynb
