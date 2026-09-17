@@ -1,9 +1,10 @@
-# Wherobots Examples
+# Wherobots Examples — Sedona-Sail dev runtime
 
-This repository contains the notebook examples that Wherobots provide for customers.
-Those examples provide various examples of spatial analytics and spatial data
-processing use cases showcasing the capabilities of [Apache Sedona](https://sedona.apache.org)
-and [WherobotsDB](https://wherobots.com/wherobots-db/).
+This branch is the example set shipped with the **`0.0.1-jameswillis` dev runtime**, which runs
+[sedona-sail](https://github.com/james-willis/sail) — [Sail](https://github.com/lakehq/sail) with the
+[SedonaDB](https://sedona.apache.org/sedonadb/) spatial kernels — in place of a JVM Spark cluster.
+It contains a single notebook: start a Sail session and run SpatialBench Q3. The full example
+library lives on [`main`](https://github.com/wherobots/wherobots-examples).
 
 ## Contributing
 
@@ -13,50 +14,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines, pre-commit s
 
 ```
 .
-|-- Analyzing_Data
-|   |-- California_Coastal_Flood_Risk_Analysis.ipynb
-|   |-- Clustering_DBSCAN.ipynb
-|   |-- GPS_Map_Matching.ipynb
-|   |-- Getis_Ord_Gi*.ipynb
-|   |-- Isochrones.ipynb
-|   |-- K_Nearest_Neighbor_Join.ipynb
-|   |-- Local_Outlier_Factor.ipynb
-|   |-- PMTiles-railroad.ipynb
-|   |-- RasterFlow_Bring_Your_Own_Model.ipynb
-|   |-- RasterFlow_Bring_Your_Own_Rasters_NAIP.ipynb
-|   |-- RasterFlow_CHM.ipynb
-|   |-- RasterFlow_ChangeDetection.ipynb
-|   |-- RasterFlow_Chesapeake.ipynb
-|   |-- RasterFlow_FTW.ipynb
-|   |-- RasterFlow_NAIP_Mosaic.ipynb
-|   |-- RasterFlow_S2_Mosaic.ipynb
-|   |-- RasterFlow_SAM3.ipynb
-|   |-- RasterFlow_Tile2Net.ipynb
-|   `-- Zonal_Stats_ESAWorldCover_Texas.ipynb
 |-- CONTRIBUTING.md
 |-- Getting_Started
-|   |-- Part_1_Loading_Data.ipynb
-|   |-- Part_2_Reading_Spatial_Files.ipynb
-|   |-- Part_3_Accelerating_Geospatial_Datasets.ipynb
-|   `-- Part_4_Spatial_Joins.ipynb
-|-- Makefile
-|-- Open_Data_Connections
-|   |-- ESA_WorldCover.ipynb
-|   |-- Foursquare_Places.ipynb
-|   |-- NOAA_SWDI.ipynb
-|   `-- Overture_Maps.ipynb
-|-- Reading_and_Writing_Data
-|   |-- Loading_Common_Spatial_File_Types.ipynb
-|   |-- Map_Tile_Generation.ipynb
-|   |-- STAC_Reader.ipynb
-|   `-- Unity_Catalog_Delta_Tables.ipynb
-`-- scala
-    |-- Getting_Started.ipynb
-    `-- packaging-example-project
-        |-- pom.xml
-        `-- src
-            |-- main
-            `-- test
+|   `-- Sedona_Sail_SpatialBench_Q3.ipynb
+`-- Makefile
 
 ```
 
