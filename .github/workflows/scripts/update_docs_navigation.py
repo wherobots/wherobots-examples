@@ -37,7 +37,6 @@ NOTEBOOK_LOCATIONS: dict[str, list[str]] = {
     "unity-catalog-delta-tables": ["Data Connections"],
     "stac-reader": ["Data Connections"],
     "esa-worldcover": ["Data Connections"],
-    "foursquare-places": ["Data Connections"],
     "noaa-swdi": ["Data Connections"],
     "overture-maps": ["Data Connections"],
     # RasterFlow group (top-level)
