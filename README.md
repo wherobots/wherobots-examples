@@ -42,7 +42,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines, pre-commit s
 |-- Makefile
 |-- Open_Data_Connections
 |   |-- ESA_WorldCover.ipynb
-|   |-- Foursquare_Places.ipynb
 |   |-- NOAA_SWDI.ipynb
 |   `-- Overture_Maps.ipynb
 |-- Reading_and_Writing_Data
