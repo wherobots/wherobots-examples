@@ -39,6 +39,9 @@ NOTEBOOK_LOCATIONS: dict[str, list[str]] = {
     "esa-worldcover": ["Data Connections"],
     "noaa-swdi": ["Data Connections"],
     "overture-maps": ["Data Connections"],
+    "cecil-crop-type-labeling": ["Data Connections"],
+    "cecil-hansen-forest-loss": ["Data Connections"],
+    "cecil-nature-risk-screening": ["Data Connections"],
     # RasterFlow group (top-level)
     "rasterflow-chm": ["RasterFlow"],
     "rasterflow-chesapeake": ["RasterFlow"],
