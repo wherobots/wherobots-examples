@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   convert-and-push:
@@ -22,11 +23,20 @@ jobs:
         with:
           path: wherobots-examples
 
+      # Short-lived token scoped to wherobots/docs, granted by
+      # .github/chainguard/wherobots-examples-docs.sts.yaml in that repo.
+      - name: Get Octo-STS token
+        id: octo-sts
+        uses: octo-sts/action@f603d3be9d8dd9871a265776e625a27b00effe05 # v1.1.1
+        with:
+          scope: wherobots/docs
+          identity: wherobots-examples-docs
+
       - name: Checkout wherobots/docs
         uses: actions/checkout@v4
         with:
           repository: wherobots/docs
-          token: ${{ secrets.DOCS_REPO_TOKEN }}
+          token: ${{ steps.octo-sts.outputs.token }}
           path: docs
 
       - name: Set up Python
@@ -66,7 +76,7 @@ jobs:
         if: steps.git-check.outputs.changes == 'true'
         working-directory: docs
         env:
-          GH_TOKEN: ${{ secrets.DOCS_REPO_TOKEN }}
+          GH_TOKEN: ${{ steps.octo-sts.outputs.token }}
         run: |
           # Configure git
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
