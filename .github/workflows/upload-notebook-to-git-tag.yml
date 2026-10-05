@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
 
     steps:
       - name: Checkout repository
@@ -75,3 +76,39 @@ jobs:
           tag_name: converted-notebooks
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Publish the same notebooks to the public wherobots-examples bucket, where
+      # notebook instances, the VS Code extension and the wbc-images notebook
+      # tests read them instead of from GitHub. Skipped until the
+      # NOTEBOOKS_S3_ROLE_ARN Actions variable is set.
+
+      - name: Test notebook bundle script
+        if: vars.NOTEBOOKS_S3_ROLE_ARN != ''
+        run: python -m unittest discover -s .github/workflows/scripts/tests
+
+      - name: Configure AWS credentials
+        if: vars.NOTEBOOKS_S3_ROLE_ARN != '' && (github.ref_type == 'tag' || github.ref == 'refs/heads/main')
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.NOTEBOOKS_S3_ROLE_ARN }}
+          aws-region: us-west-2
+
+      # notebooks/archive/<tag>.zip has GitHub's tag zip layout, so the
+      # jupyter-spark-lab init container unpacks it unchanged.
+      - name: Publish tagged notebooks to S3
+        if: vars.NOTEBOOKS_S3_ROLE_ARN != '' && github.ref_type == 'tag'
+        env:
+          CONVERTED: ${{ steps.convert-notebooks.outputs.output_path }}
+        run: |
+          python .github/workflows/scripts/build_notebook_bundles.py archive --out "$RUNNER_TEMP/archive" "$GITHUB_REF_NAME"
+          aws s3 cp "$RUNNER_TEMP/archive/$GITHUB_REF_NAME.zip" "s3://wherobots-examples/notebooks/archive/$GITHUB_REF_NAME.zip"
+          aws s3 cp "$CONVERTED" "s3://wherobots-examples/notebooks/converted/$GITHUB_REF_NAME/converted_notebooks.tar.gz"
+
+      - name: Publish main notebooks to S3
+        if: vars.NOTEBOOKS_S3_ROLE_ARN != '' && github.ref == 'refs/heads/main'
+        env:
+          CONVERTED: ${{ steps.convert-notebooks.outputs.output_path }}
+        run: |
+          python .github/workflows/scripts/build_notebook_bundles.py tree --out "$RUNNER_TEMP/main" HEAD
+          aws s3 sync "$RUNNER_TEMP/main" s3://wherobots-examples/notebooks/main/ --delete
+          aws s3 cp "$CONVERTED" s3://wherobots-examples/notebooks/converted/latest/converted_notebooks.tar.gz
