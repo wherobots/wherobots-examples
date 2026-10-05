@@ -1,0 +1,176 @@
+{
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Guides",
+        "pages": [
+          "develop/index",
+          {
+            "group": "Connect your data",
+            "expanded": false,
+            "pages": [
+              "get-started/initial-storage/data-hub"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Spatial Analytics Tutorials",
+        "pages": [
+          "tutorials/index",
+          {
+            "group": "Use Cases",
+            "icon": "industry",
+            "expanded": false,
+            "pages": [
+              "tutorials/use-cases/index",
+              "tutorials/use-cases/land-monitoring-catastrophe-prediction",
+              "tutorials/use-cases/facility-management",
+              "tutorials/use-cases/site-selection",
+              "tutorials/use-cases/fleet-logistics",
+              "tutorials/use-cases/agriculture",
+              "tutorials/use-cases/insurance",
+              "tutorials/use-cases/environmental-monitoring",
+              "tutorials/use-cases/last-mile-delivery"
+            ]
+          },
+          {
+            "group": "Getting Started",
+            "icon": "rocket",
+            "pages": [
+              "tutorials/example-notebooks/part-1-loading-data",
+              "tutorials/example-notebooks/part-2-reading-spatial-files",
+              "tutorials/example-notebooks/part-3-accelerating-geospatial-datasets",
+              "tutorials/example-notebooks/part-4-spatial-joins"
+            ]
+          },
+          {
+            "group": "Spatial Queries",
+            "icon": "code",
+            "pages": [
+              "develop/write-spatial-queries",
+              "develop/wkls"
+            ]
+          },
+          {
+            "group": "WherobotsDB",
+            "icon": "database",
+            "pages": [
+              "tutorials/wherobotsdb/introduction",
+              "tutorials/wherobotsdb/set-up-wherobotsdb",
+              {
+                "group": "Vector Data",
+                "pages": [
+                  "tutorials/wherobotsdb/vector-data/vector-load",
+                  "tutorials/wherobotsdb/vector-data/vector-sql",
+                  "tutorials/wherobotsdb/vector-data/vector-visualize",
+                  "tutorials/wherobotsdb/vector-data/vector-save",
+                  "tutorials/wherobotsdb/vector-data/havasu",
+                  "tutorials/wherobotsdb/vector-data/rdd",
+                  "tutorials/spatial-catalog/dekart-integration",
+                  "tutorials/spatial-catalog/felt-integration"
+                ]
+              },
+              {
+                "group": "Raster Data",
+                "pages": [
+                  "tutorials/wherobotsdb/raster-data/raster-load",
+                  "tutorials/wherobotsdb/raster-data/raster-sql",
+                  "tutorials/wherobotsdb/raster-data/raster-visualizer",
+                  "tutorials/wherobotsdb/raster-data/raster-save",
+                  "tutorials/wherobotsdb/raster-data/havasu"
+                ]
+              },
+              {
+                "group": "Vector Tiles (PMTiles)",
+                "pages": [
+                  "tutorials/wherobotsdb/tile-generation/tile-generation",
+                  "tutorials/wherobotsdb/tile-generation/feature-filters",
+                  "tutorials/wherobotsdb/tile-generation/cors",
+                  "tutorials/example-notebooks/pmtiles-railroad"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "Data Connections",
+            "icon": "plug",
+            "pages": [
+              "tutorials/spatial-catalog/introduction",
+              "tutorials/spatial-catalog/views",
+              "tutorials/spatial-catalog/dekart-integration",
+              "tutorials/example-notebooks/unity-catalog-delta-tables",
+              "tutorials/example-notebooks/stac-reader",
+              "tutorials/example-notebooks/esa-worldcover",
+              "tutorials/example-notebooks/noaa-swdi",
+              "tutorials/example-notebooks/overture-maps"
+            ]
+          },
+          {
+            "group": "RasterFlow",
+            "icon": "layer-group",
+            "pages": [
+              "tutorials/example-notebooks/rasterflow-chm",
+              "tutorials/example-notebooks/rasterflow-chesapeake",
+              "tutorials/example-notebooks/rasterflow-changedetection",
+              "tutorials/example-notebooks/rasterflow-ftw",
+              "tutorials/example-notebooks/rasterflow-s2-mosaic",
+              "tutorials/example-notebooks/rasterflow-tile2net",
+              "tutorials/example-notebooks/rasterflow-sam3",
+              "tutorials/example-notebooks/rasterflow-bring-your-own-model",
+              "tutorials/example-notebooks/rasterflow-bring-your-own-rasters-naip",
+              "tutorials/example-notebooks/rasterflow-naip-mosaic"
+            ]
+          },
+          {
+            "group": "Advanced Topics",
+            "icon": "graduation-cap",
+            "pages": [
+              "tutorials/example-notebooks/isochrones",
+              "tutorials/example-notebooks/california-coastal-flood-risk-analysis",
+              "tutorials/example-notebooks/zonal-stats-esaworldcover-texas",
+              "tutorials/example-notebooks/loading-common-spatial-file-types",
+              "tutorials/example-notebooks/map-tile-generation",
+              "tutorials/geostats-map-matching/map-matching/map-matching-road-networks",
+              "tutorials/example-notebooks/getting-started"
+            ]
+          },
+          {
+            "group": "GeoStats & Map Matching",
+            "icon": "brain",
+            "pages": [
+              "tutorials/geostats-map-matching/overview",
+              {
+                "group": "Spatial Statistics",
+                "pages": [
+                  "tutorials/example-notebooks/clustering-dbscan",
+                  "tutorials/example-notebooks/getis-ord-gi*",
+                  "tutorials/example-notebooks/local-outlier-factor",
+                  "tutorials/example-notebooks/k-nearest-neighbor-join"
+                ]
+              },
+              "tutorials/example-notebooks/gps-map-matching"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Reference",
+        "pages": [
+          "reference/index"
+        ]
+      }
+    ]
+  },
+  "api": {
+    "playground": {
+      "display": "interactive"
+    }
+  },
+  "redirects": [
+    {
+      "source": "/tutorials",
+      "destination": "/tutorials/index"
+    }
+  ]
+}

@@ -34,6 +34,9 @@ jobs:
         with:
           python-version: '3.x'
           architecture: 'x64'
+
+      - name: Test documentation navigation sync
+        run: python -m unittest discover -s .github/workflows/scripts/tests -v
           
       - name: Install dependencies
         run: |
