@@ -52,11 +52,18 @@ jobs:
           tags=${TAGS:-$(git tag --list 'v*')}
           python .github/workflows/scripts/build_notebook_bundles.py archive --out "$RUNNER_TEMP/archive" $tags
           mkdir -p "$RUNNER_TEMP/github" "$RUNNER_TEMP/converted"
+          # Only tags whose release has the asset; any download among those must succeed.
+          gh api --paginate "repos/$GITHUB_REPOSITORY/releases" \
+            --jq '.[] | select(any(.assets[]; .name == "converted_notebooks.tar.gz")) | .tag_name' \
+            > "$RUNNER_TEMP/tags-with-converted"
           for tag in $tags; do
             curl -sSfL "https://github.com/$GITHUB_REPOSITORY/archive/refs/tags/$tag.zip" -o "$RUNNER_TEMP/github/$tag.zip"
             python .github/workflows/scripts/build_notebook_bundles.py compare "$RUNNER_TEMP/archive/$tag.zip" "$RUNNER_TEMP/github/$tag.zip"
-            gh release download "$tag" --pattern converted_notebooks.tar.gz --dir "$RUNNER_TEMP/converted/$tag" \
-              || echo "No converted notebooks release asset for $tag"
+            if grep -qxF "$tag" "$RUNNER_TEMP/tags-with-converted"; then
+              gh release download "$tag" --pattern converted_notebooks.tar.gz --dir "$RUNNER_TEMP/converted/$tag"
+            else
+              echo "No converted notebooks release asset for $tag"
+            fi
           done
           echo "Checked $(ls "$RUNNER_TEMP/archive" | wc -l) archives against GitHub"
 

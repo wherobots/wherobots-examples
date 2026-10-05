@@ -7,6 +7,12 @@ on:
       - "v**"
   workflow_dispatch:
 
+# One run per ref at a time, in push order, so an older run never overwrites
+# what a newer one published (GitHub releases and S3 alike).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   convert-and-upload:
     name: Convert Notebooks to Python Scripts
