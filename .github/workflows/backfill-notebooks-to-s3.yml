@@ -1,0 +1,79 @@
+name: Backfill Notebook Archives to S3
+
+# Publishes notebooks/archive/<tag>.zip, and each release's converted notebooks,
+# for tags that predate S3 publishing in upload-notebook-to-git-tag.yml. Every
+# zip is checked against the one GitHub serves for the tag before anything is
+# uploaded, so run it while the repository is still public.
+on:
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: "Space-separated tags to publish (default: every v* tag)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  backfill:
+    name: Backfill notebook archives
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the publisher role is configured
+        env:
+          ROLE_ARN: ${{ vars.NOTEBOOKS_S3_ROLE_ARN }}
+        run: |
+          if [ -z "$ROLE_ARN" ]; then
+            echo "::error::Set the NOTEBOOKS_S3_ROLE_ARN Actions variable first"
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Test notebook bundle script
+        run: python -m unittest discover -s .github/workflows/scripts/tests
+
+      - name: Build archives and check them against GitHub's
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAGS: ${{ inputs.tags }}
+        run: |
+          tags=${TAGS:-$(git tag --list 'v*')}
+          python .github/workflows/scripts/build_notebook_bundles.py archive --out "$RUNNER_TEMP/archive" $tags
+          mkdir -p "$RUNNER_TEMP/github" "$RUNNER_TEMP/converted"
+          # Only tags whose release has the asset; any download among those must succeed.
+          gh api --paginate "repos/$GITHUB_REPOSITORY/releases" \
+            --jq '.[] | select(any(.assets[]; .name == "converted_notebooks.tar.gz")) | .tag_name' \
+            > "$RUNNER_TEMP/tags-with-converted"
+          for tag in $tags; do
+            curl -sSfL "https://github.com/$GITHUB_REPOSITORY/archive/refs/tags/$tag.zip" -o "$RUNNER_TEMP/github/$tag.zip"
+            python .github/workflows/scripts/build_notebook_bundles.py compare "$RUNNER_TEMP/archive/$tag.zip" "$RUNNER_TEMP/github/$tag.zip"
+            if grep -qxF "$tag" "$RUNNER_TEMP/tags-with-converted"; then
+              gh release download "$tag" --pattern converted_notebooks.tar.gz --dir "$RUNNER_TEMP/converted/$tag"
+            else
+              echo "No converted notebooks release asset for $tag"
+            fi
+          done
+          echo "Checked $(ls "$RUNNER_TEMP/archive" | wc -l) archives against GitHub"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.NOTEBOOKS_S3_ROLE_ARN }}
+          aws-region: us-west-2
+
+      - name: Upload to S3
+        run: |
+          aws s3 cp --recursive "$RUNNER_TEMP/archive" s3://wherobots-examples/notebooks/archive/
+          aws s3 cp --recursive "$RUNNER_TEMP/converted" s3://wherobots-examples/notebooks/converted/
