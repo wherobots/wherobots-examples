@@ -36,20 +36,6 @@ def paths(pages):
     return result
 
 
-def shared_sidebar():
-    config = copy.deepcopy(EXAMPLES)
-    sections = []
-    for item in config['navigation'].pop('tabs'):
-        if item['tab'] == 'Examples':
-            section = item['pages'][0]
-        else:
-            section = {'group': item['tab'], 'root': item['pages'][0], 'pages': item['pages'][1:]}
-        section['expanded'] = False
-        sections.append(section)
-    config['navigation']['groups'] = [{'group': 'Documentation', 'root': 'index', 'pages': sections}]
-    return config
-
-
 NOTEBOOK_NAMES = {Path(p).name for p in paths(tab(EXAMPLES, 'Examples')['pages']) if p.startswith('tutorials/example-notebooks/')}
 
 
@@ -150,72 +136,6 @@ class NavigationSyncTest(unittest.TestCase):
         self.assertNotIn('Error:', result.stdout)
         self.assertEqual(actual, EXAMPLES)
         self.assertEqual(self.config_file.read_bytes(), before)
-
-    def test_shared_sidebar_restores_notebooks_using_stable_root(self):
-        config = shared_sidebar()
-        sections = config['navigation']['groups'][0]['pages']
-        examples = next(p for p in sections if p.get('root') == 'tutorials/index')
-        examples['group'] = 'Worked examples'
-        cases = [
-            ('part-4-spatial-joins', ('Beginner learning path',)),
-            ('pmtiles-railroad', ('Spatial SQL and visualization',)),
-            ('overture-maps', ('Data sources',)),
-            ('rasterflow-sam3', ('Raster imagery',)),
-            ('isochrones', ('Statistics and routing',)),
-            ('clustering-dbscan', ('Statistics and routing', 'Spatial Statistics')),
-        ]
-        for name, route in cases:
-            group(examples['pages'], *route).remove('tutorials/example-notebooks/' + name)
-        expected = copy.deepcopy(config)
-        expected_examples = next(p for p in expected['navigation']['groups'][0]['pages'] if p.get('root') == 'tutorials/index')
-        for name, route in cases:
-            group(expected_examples['pages'], *route).append('tutorials/example-notebooks/' + name)
-        result, actual, _ = self.run_script(config)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(actual, expected)
-
-    def test_shared_sidebar_removes_stale_notebook_preserving_manual_pages_and_metadata(self):
-        expected = shared_sidebar()
-        config = copy.deepcopy(expected)
-        group(config['navigation']['groups'], 'Documentation', 'Examples', 'Use Cases').append('tutorials/example-notebooks/removed-notebook')
-        result, actual, _ = self.run_script(config)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(actual, expected)
-
-    def test_shared_sidebar_is_idempotent(self):
-        config = shared_sidebar()
-        result, actual, before = self.run_script(config)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(actual, config)
-        self.assertEqual(self.config_file.read_bytes(), before)
-        result, actual, before = self.run_script(actual)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(actual, config)
-        self.assertEqual(self.config_file.read_bytes(), before)
-
-    def test_shared_sidebar_missing_root_fails_nonzero_without_writing(self):
-        config = shared_sidebar()
-        examples = next(p for p in config['navigation']['groups'][0]['pages'] if p.get('root') == 'tutorials/index')
-        examples['root'] = 'tutorials/unsupported'
-        result, actual, before = self.run_script(config)
-        self.assertNotEqual(result.returncode, 0)
-        self.assertEqual(self.config_file.read_bytes(), before)
-
-    def test_multiple_shared_sidebar_roots_fail_nonzero_without_writing(self):
-        config = shared_sidebar()
-        config['navigation']['groups'].append({'group': 'Other wrapper', 'pages': [copy.deepcopy(next(p for p in config['navigation']['groups'][0]['pages'] if p.get('root') == 'tutorials/index'))]})
-        result, actual, before = self.run_script(config)
-        self.assertNotEqual(result.returncode, 0)
-        self.assertEqual(self.config_file.read_bytes(), before)
-        self.assertIn('exactly one', result.stderr)
-
-    def test_simultaneous_tab_and_shared_sidebar_fail_nonzero_without_writing(self):
-        config = shared_sidebar()
-        config['navigation']['tabs'] = copy.deepcopy(EXAMPLES['navigation']['tabs'])
-        result, actual, before = self.run_script(config)
-        self.assertNotEqual(result.returncode, 0)
-        self.assertEqual(self.config_file.read_bytes(), before)
-        self.assertIn('exactly one', result.stderr)
 
     def test_missing_docs_file_fails_nonzero(self):
         result = subprocess.run([sys.executable, str(UPDATER), '--docs-json', str(self.config_file), '--notebooks-dir', str(self.notebooks)], capture_output=True, text=True)

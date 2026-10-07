@@ -4,7 +4,7 @@ Update docs.json navigation with converted MDX notebooks.
 
 This script updates the wherobots/docs docs.json file to include
 example notebooks under the legacy "Spatial Analytics Tutorials" tab or
-the Examples section in a tabbed layout or shared sidebar.
+the "Examples" tab and its nested root group.
 
 It uses NOTEBOOK_LOCATIONS to map each notebook to its target location
 in the docs.json navigation structure, supporting nested group hierarchies.
@@ -124,21 +124,6 @@ def find_group(pages: list, group_path: list[str]) -> Optional[list]:
     return None
 
 
-def find_groups_by_root(groups: list, root: str) -> list[dict]:
-    """Find shared-sidebar groups by their stable landing-page route."""
-    matches = []
-    for item in groups:
-        if not isinstance(item, dict):
-            continue
-        if "group" in item and item.get("root") == root:
-            matches.append(item)
-        for key in ("groups", "pages"):
-            children = item.get(key)
-            if isinstance(children, list):
-                matches.extend(find_groups_by_root(children, root))
-    return matches
-
-
 def remove_stale_notebooks(pages: list, valid_paths: set[str]) -> int:
     removed = 0
     kept = []
@@ -190,18 +175,16 @@ def update_docs_json(docs_json_path: Path, notebook_paths: dict[str, str]) -> No
     with open(docs_json_path, "r", encoding="utf-8") as f:
         docs_config = json.load(f)
 
-    navigation = docs_config.get("navigation", {})
-    tabs = navigation.get("tabs", [])
+    tabs = docs_config.get("navigation", {}).get("tabs", [])
     matches = [tab for tab in tabs if tab.get("tab") in {"Spatial Analytics Tutorials", "Examples"}]
-    shared_groups = find_groups_by_root(navigation.get("groups", []), "tutorials/index")
-    if len(matches) + len(shared_groups) != 1:
-        raise ValueError("Expected exactly one legacy tutorials tab, Examples tab, or group rooted at 'tutorials/index'")
-    notebook_section = shared_groups[0] if shared_groups else matches[0]
-    tutorials_pages = notebook_section.get("pages")
-    examples = bool(shared_groups) or notebook_section["tab"] == "Examples"
+    if len(matches) != 1:
+        raise ValueError("Expected exactly one 'Spatial Analytics Tutorials' or 'Examples' tab")
+    tutorials_tab = matches[0]
+    tutorials_pages = tutorials_tab.get("pages")
+    examples = tutorials_tab["tab"] == "Examples"
     if not isinstance(tutorials_pages, list):
-        raise ValueError("Notebook navigation must have a pages array")
-    if examples and not shared_groups:
+        raise ValueError("Notebook tab must have a pages array")
+    if examples:
         tutorials_pages = find_group(tutorials_pages, ["Examples"])
         if tutorials_pages is None:
             raise ValueError("Could not find the 'Examples' root group")
