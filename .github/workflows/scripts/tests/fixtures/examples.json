@@ -1,0 +1,137 @@
+{
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Guides",
+        "pages": [
+          "develop/index",
+          {
+            "group": "Connect your data",
+            "expanded": false,
+            "pages": [
+              "get-started/initial-storage/data-hub"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Examples",
+        "pages": [
+          {
+            "group": "Examples",
+            "root": "tutorials/index",
+            "pages": [
+              {
+                "group": "Beginner learning path",
+                "expanded": false,
+                "pages": [
+                  "tutorials/example-notebooks/part-1-loading-data",
+                  "tutorials/example-notebooks/part-2-reading-spatial-files",
+                  "tutorials/example-notebooks/part-3-accelerating-geospatial-datasets",
+                  "tutorials/example-notebooks/part-4-spatial-joins"
+                ],
+                "icon": "rocket"
+              },
+              {
+                "group": "Spatial SQL and visualization",
+                "expanded": false,
+                "pages": [
+                  "tutorials/example-notebooks/california-coastal-flood-risk-analysis",
+                  "tutorials/example-notebooks/zonal-stats-esaworldcover-texas",
+                  "tutorials/example-notebooks/loading-common-spatial-file-types",
+                  "tutorials/example-notebooks/map-tile-generation",
+                  "tutorials/example-notebooks/getting-started",
+                  "tutorials/example-notebooks/pmtiles-railroad"
+                ],
+                "icon": "map"
+              },
+              {
+                "group": "Data sources",
+                "expanded": false,
+                "pages": [
+                  "tutorials/example-notebooks/unity-catalog-delta-tables",
+                  "tutorials/example-notebooks/stac-reader",
+                  "tutorials/example-notebooks/esa-worldcover",
+                  "tutorials/example-notebooks/noaa-swdi",
+                  "tutorials/example-notebooks/overture-maps"
+                ],
+                "icon": "plug"
+              },
+              {
+                "group": "Raster imagery",
+                "expanded": false,
+                "pages": [
+                  "tutorials/example-notebooks/rasterflow-chm",
+                  "tutorials/example-notebooks/rasterflow-chesapeake",
+                  "tutorials/example-notebooks/rasterflow-changedetection",
+                  "tutorials/example-notebooks/rasterflow-ftw",
+                  "tutorials/example-notebooks/rasterflow-s2-mosaic",
+                  "tutorials/example-notebooks/rasterflow-tile2net",
+                  "tutorials/example-notebooks/rasterflow-sam3",
+                  "tutorials/example-notebooks/rasterflow-bring-your-own-model",
+                  "tutorials/example-notebooks/rasterflow-bring-your-own-rasters-naip",
+                  "tutorials/example-notebooks/rasterflow-naip-mosaic"
+                ],
+                "icon": "layer-group"
+              },
+              {
+                "group": "Statistics and routing",
+                "icon": "brain",
+                "pages": [
+                  "tutorials/geostats-map-matching/overview",
+                  {
+                    "group": "Spatial Statistics",
+                    "pages": [
+                      "tutorials/example-notebooks/clustering-dbscan",
+                      "tutorials/example-notebooks/getis-ord-gi*",
+                      "tutorials/example-notebooks/local-outlier-factor",
+                      "tutorials/example-notebooks/k-nearest-neighbor-join"
+                    ],
+                    "expanded": false
+                  },
+                  "tutorials/example-notebooks/gps-map-matching",
+                  "tutorials/example-notebooks/isochrones",
+                  "tutorials/geostats-map-matching/map-matching/map-matching-road-networks"
+                ],
+                "expanded": false
+              },
+              {
+                "group": "Use Cases",
+                "icon": "industry",
+                "expanded": false,
+                "pages": [
+                  "tutorials/use-cases/index",
+                  "tutorials/use-cases/land-monitoring-catastrophe-prediction",
+                  "tutorials/use-cases/facility-management",
+                  "tutorials/use-cases/site-selection",
+                  "tutorials/use-cases/fleet-logistics",
+                  "tutorials/use-cases/agriculture",
+                  "tutorials/use-cases/insurance",
+                  "tutorials/use-cases/environmental-monitoring",
+                  "tutorials/use-cases/last-mile-delivery"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Reference",
+        "pages": [
+          "reference/index"
+        ]
+      }
+    ]
+  },
+  "api": {
+    "playground": {
+      "display": "interactive"
+    }
+  },
+  "redirects": [
+    {
+      "source": "/tutorials",
+      "destination": "/tutorials/index"
+    }
+  ]
+}
